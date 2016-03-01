@@ -1,2 +1,3 @@
-# dvd-project-yellow
-DVD Project Yellow
+# DVD Project Yellow
+
+Przykładowa gra do napisania na IO.
