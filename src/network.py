@@ -1,10 +1,15 @@
 import pickle
-import sfml as sf
+import sfml.network as net
+
+_hello_message = b'dvdyellow hello: '
+_accept_message = b'dvdyellow accepted'
 
 
 class Client:
-    def __init__(self, api_version):
-        raise NotImplementedError
+    def __init__(self, api_version, blocking = False):
+        self.api_version = api_version
+        self.socket = net.TcpSocket()
+        self.socket.blocking = blocking
 
     def connect(self, address, port):
         """
@@ -13,13 +18,83 @@ class Client:
         :param port: Port on which the server runs.
         :return: Temporary object to query if connecting to client succeeded.
         """
-        raise NotImplementedError
+        if isinstance(address, str):
+            address = net.IpAddress(address)
 
-    def close(self):
+        class Connector:
+            """
+            Waits for connection to the server and does API version checking
+            in a non-blocking way.
+            """
+            def __init__(self, client, address, port):
+                self.client = client
+                self.address = address
+                self.port = port
+                self.state = 0 # nothing done
+                self.buffer = b''
+                self.missing = 64  # bytes
+                self.accepted = False
+
+                self._run()
+
+                # States:
+                # 0 - nothing done
+                # 1 - waiting for connection
+                # 2 - connected, hello message sent, waiting for response
+                # 3 - got response - did everything
+
+            @property
+            def is_connected(self):
+                return self.accepted if self._run() else False
+
+            def _run(self):
+                """
+                Runs some stuff to check if connected...
+                :return: True if connecting process is finished.
+                """
+                if self.state == 0 or self.state == 1:
+                    try:
+                        self.client.socket.connect(self.address, self.port)
+                    except net.SocketNotReady:
+                        return False
+                    # connected - send hello message
+                    message = (_hello_message + pickle.dumps(self.client.api_version)).ljust(64, b'\x00')
+                    self.client.socket.send(message)
+                    self.state = 2
+
+                if self.state == 2:
+                    try:
+                        tmp += self.client.socket.receive(self.missing)
+                        self.missing -= len(tmp)
+                        self.buffer += tmp
+                    except net.SocketNotReady:
+                        return False
+
+                    if self.missing > 0:
+                        return False
+
+                    # check message => API compatibility
+                    if self.buffer == _accept_message.ljust(64, b'\x00'):
+                        self.accepted = True
+                    else:
+                        self.accepted = False
+                        self.client.socket.disconnect()
+                    self.state = 3
+                    return True
+
+                if self.state == 3:
+                    return True
+
+                return False
+
+        connector = Connector(self, address, port)
+        return connector
+
+    def disconnect(self):
         """
         Closes connection and frees all the resources.
         """
-        raise NotImplementedError
+        self.socket.disconnect()
 
     def query(self, module, command, data):
         """
@@ -57,8 +132,17 @@ class Client:
 
 
 class Server:
-    def __init__(self):
-        raise NotImplementedError
+    def __init__(self, api_version_checker):
+        self.api_version_checker = api_version_checker
+        self.listener = net.TcpListener()
+        self.working = False
+        self.clients = dict()
+
+        def seq_id_generator(start):
+            while True:
+                yield start
+                start += 1
+        self.id_generator = seq_id_generator(7)
 
     def listen(self, address, port):
         """
@@ -66,13 +150,27 @@ class Server:
         :param address: Network address specifying interface.
         :param port: Port number.
         """
-        raise NotImplementedError
+        if isinstance(address, str):
+            address = net.IpAddress(address)
+
+        self.listener.listen(address, port)
+        self.working = True
+        self._work()
+        self._disconnect_all()
+
+    def _work(self):
+        while self.working:
+            pass
+
+    def _disconnect_all(self):
+        for client in self.clients:
+            # disconnect it
 
     def close(self):
         """
         Stops listening and frees resources.
         """
-        raise NotImplementedError
+        self.working = False
 
     def set_accept_handler(self, func):
         """
@@ -88,6 +186,12 @@ class Server:
         :param module: To which module assign the handler.
         :param func: The function that is called when query is received.
         :return: An old query handler.
+        """
+        raise NotImplementedError
+
+    def set_disconnect_handler(self, func):
+        """
+        Sets function called when some client gets disconnected.
         """
         raise NotImplementedError
 
