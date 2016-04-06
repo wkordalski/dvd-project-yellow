@@ -1,4 +1,5 @@
 import pickle
+import sfml as sf
 import sfml.network as net
 
 _hello_message = b'dvdyellow hello: '
@@ -6,10 +7,11 @@ _accept_message = b'dvdyellow accepted'
 
 
 class Client:
-    def __init__(self, api_version, blocking = False):
+    def __init__(self, api_version, blocking=False):
         self.api_version = api_version
         self.socket = net.TcpSocket()
         self.socket.blocking = blocking
+        self.notification_handler = dict()
 
     def connect(self, address, port):
         """
@@ -26,11 +28,11 @@ class Client:
             Waits for connection to the server and does API version checking
             in a non-blocking way.
             """
-            def __init__(self, client, address, port):
+            def __init__(self, client, target_address, target_port):
                 self.client = client
-                self.address = address
-                self.port = port
-                self.state = 0 # nothing done
+                self.address = target_address
+                self.port = target_port
+                self.state = 0  # nothing done
                 self.buffer = b''
                 self.missing = 64  # bytes
                 self.accepted = False
@@ -64,7 +66,7 @@ class Client:
 
                 if self.state == 2:
                     try:
-                        tmp += self.client.socket.receive(self.missing)
+                        tmp = self.client.socket.receive(self.missing)
                         self.missing -= len(tmp)
                         self.buffer += tmp
                     except net.SocketNotReady:
@@ -104,14 +106,15 @@ class Client:
         :param data: Parameter of the command - serialized before sending.
         :return: Temporary object to get the answer for the query.
         """
+        # TODO - send data with socket - some notifications could be triggered
         raise NotImplementedError
 
-    def receive_notifications(self, max_number_of_notifications=1000):
+    def receive(self):
         """
-        Processes notifications from servers.
-        :param max_number_of_notifications: Maximal number of notifications to process.
+        Processes notifications and responses from servers.
         :return: Number of notifications processed.
         """
+        # TODO - receives notifications and responses from server
         raise NotImplementedError
 
     def set_notification_handler(self, channel, func):
@@ -121,22 +124,23 @@ class Client:
         :param func: Function to be called on notifications or None if we want to turn off this channel processing.
         :return: Old notification handler.
         """
-        raise NotImplementedError
-
-    def ignore_notifications(self, channel):
-        """
-        Removes all notifications from buffer.
-        :param channel: Channel which notifications remove.
-        """
-        raise NotImplementedError
+        old = self.notification_handler.get(channel)
+        self.notification_handler[channel] = func
+        return old
 
 
 class Server:
     def __init__(self, api_version_checker):
         self.api_version_checker = api_version_checker
         self.listener = net.TcpListener()
+        self.selector = net.SocketSelector()
+        self.selector.add(self.listener)
         self.working = False
         self.clients = dict()
+        self.query_handlers = dict()
+        self.accept_handler = None
+        self.disconnect_handler = None
+        self.permission_checker = None
 
         def seq_id_generator(start):
             while True:
@@ -160,11 +164,28 @@ class Server:
 
     def _work(self):
         while self.working:
-            pass
+            if self.selector.wait(sf.seconds(1)):
+                to_remove = set()
+                for client_id, socket in self.clients.items():
+                    if self.selector.is_ready(socket):
+                        try:
+                            pass  # TODO - some data in
+                        except net.SocketDisconnected:
+                            # TODO - call handler
+                            to_remove.add(client_id)
+
+                for client_id in to_remove:
+                    del self.clients[client_id]
+
+                if self.selector.is_ready(self.listener):
+                    pass  # TODO - some client connected
 
     def _disconnect_all(self):
-        for client in self.clients:
-            # disconnect it
+        for client_id, socket in self.clients.items():
+            self.selector.remove(socket)
+            socket.disconnect()
+
+        self.clients.clear()
 
     def close(self):
         """
@@ -178,7 +199,9 @@ class Server:
         :param func: Function to be called or None if we want to turn off accept handler.
         :return: An old accept handler.
         """
-        raise NotImplementedError
+        old = self.accept_handler
+        self.accept_handler = func
+        return old
 
     def set_query_handler(self, module, func):
         """
@@ -187,13 +210,19 @@ class Server:
         :param func: The function that is called when query is received.
         :return: An old query handler.
         """
-        raise NotImplementedError
+        old = self.query_handlers.get(module, default=None)
+        self.query_handlers[module] = func
+        return old
 
     def set_disconnect_handler(self, func):
         """
         Sets function called when some client gets disconnected.
+        :param func: Function called on client disconnect.
+        :return: An old disconnect handler.
         """
-        raise NotImplementedError
+        old = self.disconnect_handler
+        self.disconnect_handler = func
+        return old
 
     def notify(self, client, channel, data):
         """
@@ -202,6 +231,7 @@ class Server:
         :param channel: Channel by which send the notification.
         :param data: Data to be sent.
         """
+        # TODO - send data to client
         raise NotImplementedError
 
     def set_permission_checker(self, func):
@@ -210,4 +240,6 @@ class Server:
         :param func: Function that verifies the client or None to turn off the permission checker.
         :return: An old permission checker.
         """
-        raise NotImplementedError
+        old = self.permission_checker
+        self.permission_checker = func
+        return old
