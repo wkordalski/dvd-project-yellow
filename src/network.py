@@ -1,6 +1,10 @@
 import pickle
+from unittest.case import TestCase
+from threading import Thread
+
 import sfml as sf
 import sfml.network as net
+from sfml.system import sleep, milliseconds
 
 _hello_message = b'dvdyellow hello: '
 _accept_message = b'dvdyellow accepted'
@@ -21,7 +25,7 @@ class Client:
         :return: Temporary object to query if connecting to client succeeded.
         """
         if isinstance(address, str):
-            address = net.IpAddress(address)
+            address = net.IpAddress.from_string(address)
 
         class Connector:
             """
@@ -63,6 +67,14 @@ class Client:
                     message = (_hello_message + pickle.dumps(self.client.api_version)).ljust(64, b'\x00')
                     self.client.socket.send(message)
                     self.state = 2
+
+                # TODO - these lines turn off API version checking so test_connect passes
+                # uncomment them to do so
+                '''
+                    self.accepted = True
+                if self.state >= 2:
+                    return True
+                '''
 
                 if self.state == 2:
                     try:
@@ -155,16 +167,18 @@ class Server:
         :param port: Port number.
         """
         if isinstance(address, str):
-            address = net.IpAddress(address)
+            address = net.IpAddress.from_string(address)
 
-        self.listener.listen(address, port)
+        self.listener.listen(port)
         self.working = True
         self._work()
         self._disconnect_all()
+        print("Exitted.")
 
     def _work(self):
         while self.working:
             if self.selector.wait(sf.seconds(1)):
+                print("Ready!")
                 to_remove = set()
                 for client_id, socket in self.clients.items():
                     if self.selector.is_ready(socket):
@@ -178,6 +192,8 @@ class Server:
                     del self.clients[client_id]
 
                 if self.selector.is_ready(self.listener):
+                    print("Someone is nocking...")
+                    c = self.listener.accept()
                     pass  # TODO - some client connected
 
     def _disconnect_all(self):
@@ -243,3 +259,28 @@ class Server:
         old = self.permission_checker
         self.permission_checker = func
         return old
+
+
+class NetworkTests(TestCase):
+    def test_connect(self):
+        server = Server(lambda x: True)
+        client = Client(123)
+        srv_th = Thread(target=Server.listen, args=(server, '127.0.0.1', 1234), daemon=False)
+        srv_th.start()
+
+        c = client.connect('127.0.0.1', 1234)
+        for i in range(30):
+            if c.is_connected: break
+            sleep(milliseconds(100))
+        try:
+            self.assertTrue(c.is_connected)
+        except AssertionError:
+            client.disconnect()
+            server.close()
+            srv_th.join(timeout=2.)
+            raise
+
+        client.disconnect()
+        server.close()
+        srv_th.join(timeout=2.)
+        self.assertFalse(srv_th.is_alive())
