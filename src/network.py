@@ -6,9 +6,11 @@ import sfml as sf
 import sfml.network as net
 from sfml.system import sleep, milliseconds
 
+_hello_message_size = 64
 _hello_message = b'dvdyellow hello: '
 _accept_message = b'dvdyellow accepted'
 
+_packet_length_size = 4
 
 class Client:
     def __init__(self, api_version, blocking=False):
@@ -38,8 +40,8 @@ class Client:
                 self.port = target_port
                 self.state = 0  # nothing done
                 self.buffer = b''
-                self.missing = 64  # bytes
-                self.accepted = False
+                self.missing = _hello_message_size
+                self._accepted = False
 
                 self._run()
 
@@ -51,7 +53,7 @@ class Client:
 
             @property
             def is_connected(self):
-                return self.accepted if self._run() else False
+                return self._accepted if self._run() else False
 
             def _run(self):
                 """
@@ -68,14 +70,6 @@ class Client:
                     self.client.socket.send(message)
                     self.state = 2
 
-                # TODO - these lines turn off API version checking so test_connect passes
-                # uncomment them to do so
-                '''
-                    self.accepted = True
-                if self.state >= 2:
-                    return True
-                '''
-
                 if self.state == 2:
                     try:
                         tmp = self.client.socket.receive(self.missing)
@@ -89,9 +83,9 @@ class Client:
 
                     # check message => API compatibility
                     if self.buffer == _accept_message.ljust(64, b'\x00'):
-                        self.accepted = True
+                        self._accepted = True
                     else:
-                        self.accepted = False
+                        self._accepted = False
                         self.client.socket.disconnect()
                     self.state = 3
                     return True
@@ -141,18 +135,41 @@ class Client:
         return old
 
 
+class _ClientData:
+    def __init__(self, client_id, socket):
+        self.client_id = client_id
+        self.socket = socket
+        self.buffer = b''
+        self.current_packet_size = -1
+
+    def receive_to_buffer(self, data_size):
+        """
+        Receives data from client.
+        :param data_size: Amount of data to receive.
+        :return: If the data was fully received.
+        """
+        length = data_size - len(self.buffer)
+        if length > 0:
+            received_data = self.socket.receive(length)
+            length -= len(received_data)
+            self.buffer += received_data
+
+        return length == 0
+
+
 class Server:
     def __init__(self, api_version_checker):
         self.api_version_checker = api_version_checker
         self.listener = net.TcpListener()
         self.selector = net.SocketSelector()
-        self.selector.add(self.listener)
         self.working = False
-        self.clients = dict()
         self.query_handlers = dict()
         self.accept_handler = None
         self.disconnect_handler = None
         self.permission_checker = None
+
+        self.clients = dict()
+        self.unaccepted = dict()
 
         def seq_id_generator(start):
             while True:
@@ -170,36 +187,77 @@ class Server:
             address = net.IpAddress.from_string(address)
 
         self.listener.listen(port)
+        self.selector.add(self.listener)
         self.working = True
         self._work()
         self._disconnect_all()
-        print("Exitted.")
 
     def _work(self):
         while self.working:
             if self.selector.wait(sf.seconds(1)):
-                print("Ready!")
-                to_remove = set()
-                for client_id, socket in self.clients.items():
-                    if self.selector.is_ready(socket):
+                clients_to_remove = set()
+                unaccepted_to_remove = set()
+                for client_id, data in self.clients.items():
+                    if self.selector.is_ready(data.socket):
                         try:
-                            pass  # TODO - some data in
+                            if data.current_packet_size == -1:
+                                if data.receive_to_buffer(_packet_length_size):
+                                    pass
+                            else:
+                                if data.receive_to_buffer(data.current_packet_size):
+                                    pass
                         except net.SocketDisconnected:
                             # TODO - call handler
-                            to_remove.add(client_id)
+                            self.selector.remove(data.socket)
+                            clients_to_remove.add(client_id)
 
-                for client_id in to_remove:
+                for client_id, data in self.unaccepted.items():
+                    if self.selector.is_ready(data.socket):
+                        try:
+                            if data.receive_to_buffer(_hello_message_size):
+                                msg = data.buffer
+                                data.buffer = b''
+                                if msg[:len(_hello_message)] == _hello_message:
+                                    try:
+                                        api_version = int(pickle.loads(msg[len(_hello_message):]))
+                                    except TypeError:
+                                        data.socket.disconnect()
+                                        self.selector.remove(data.socket)
+                                        unaccepted_to_remove.add(client_id)
+                                    if self.api_version_checker(api_version):
+                                        data.socket.send(_accept_message.ljust(_hello_message_size, b'\x00'))
+                                        self.clients[client_id] = data
+                                        unaccepted_to_remove.add(client_id)
+                                        if self.accept_handler: self.accept_handler(client_id)
+                                    else:
+                                        data.socket.disconnect()
+                                        self.selector.remove(data.socket)
+                                        unaccepted_to_remove.add(client_id)
+                                else:
+                                    data.socket.disconnect()
+                                    self.selector.remove(data.socket)
+                                    unaccepted_to_remove.add(client_id)
+                        except net.SocketDisconnected:
+                            self.selector.remove(data.socket)
+                            unaccepted_to_remove.add(client_id)
+
+                for client_id in clients_to_remove:
                     del self.clients[client_id]
 
+                for client_id in unaccepted_to_remove:
+
+                    del self.unaccepted[client_id]
+
                 if self.selector.is_ready(self.listener):
-                    print("Someone is nocking...")
-                    c = self.listener.accept()
-                    pass  # TODO - some client connected
+                    socket = self.listener.accept()
+                    client_id = next(self.id_generator)
+                    self.unaccepted[client_id] = _ClientData(client_id, socket)
+                    self.selector.add(socket)
 
     def _disconnect_all(self):
-        for client_id, socket in self.clients.items():
-            self.selector.remove(socket)
-            socket.disconnect()
+        for client_id, data in self.clients.items():
+            self.selector.remove(data.socket)
+            data.socket.disconnect()
 
         self.clients.clear()
 
