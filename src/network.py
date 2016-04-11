@@ -303,7 +303,7 @@ class Server:
                                     msg = data.get_buffer()
                                     module, packet = pickle.loads(msg)
                                     handler = self.query_handlers.get(module)
-                                    if handler:
+                                    if handler and self.permission_checker(client_id, module):
                                         result = handler(client_id, packet)
                                     else:
                                         result = None
