@@ -1,4 +1,7 @@
 import pickle
+import struct
+from collections import deque
+
 from unittest.case import TestCase
 from threading import Thread
 
@@ -12,12 +15,16 @@ _accept_message = b'dvdyellow accepted'
 
 _packet_length_size = 4
 
+
 class Client:
     def __init__(self, api_version, blocking=False):
         self.api_version = api_version
         self.socket = net.TcpSocket()
         self.socket.blocking = blocking
         self.notification_handler = dict()
+        self.buffer = b''
+        self.current_packet_size = -1
+        self.receiving_queries_queue = deque()
 
     def connect(self, address, port):
         """
@@ -104,24 +111,104 @@ class Client:
         """
         self.socket.disconnect()
 
-    def query(self, module, command, data):
+    def query(self, module, data):
         """
         Sends command to the server to specified module with some data.
         :param module: Module to which send the command.
-        :param command: Command to be sent.
         :param data: Parameter of the command - serialized before sending.
         :return: Temporary object to get the answer for the query.
         """
-        # TODO - send data with socket - some notifications could be triggered
-        raise NotImplementedError
+        msg = pickle.dumps((module, data))
+        self.socket.send(struct.pack('I', len(msg)))
+        self.socket.send(msg)
+
+        class Query:
+            def __init__(self, client):
+                self.client = client
+                self._response_object = None
+                self._has_response = False
+
+            @property
+            def ready(self):
+                return self._has_response
+
+            def check(self):
+                while not self._has_response:
+                    if not self.client.receive(): return False
+                return True
+
+            @property
+            def response(self):
+                while not self.check(): pass
+                return self._response_object
+
+            def _set_response(self, value):
+                self._response_object = value
+                self._has_response = True
+
+        qr = Query(self)
+        self.receiving_queries_queue.append(qr)
+        return qr
+
+    def _receive_to_buffer(self, data_size):
+        """
+        Receives data from server.
+        :param data_size: Amount of data to receive.
+        :return: If the data was fully received.
+        """
+        length = data_size - len(self.buffer)
+        if length > 0:
+            try:
+                received_data = self.socket.receive(length)
+                length -= len(received_data)
+                self.buffer += received_data
+            except net.SocketNotReady:
+                return False
+
+        return length == 0
+
+    def _get_buffer(self):
+        msg = self.buffer
+        self.buffer = b''
+        self.current_packet_size = -1
+        return msg
 
     def receive(self):
         """
-        Processes notifications and responses from servers.
-        :return: Number of notifications processed.
+        Processes a notification or response from server.
+        :return: If there was something processed.
         """
-        # TODO - receives notifications and responses from server
-        raise NotImplementedError
+        if self.current_packet_size == -1:
+            if self._receive_to_buffer(_packet_length_size):
+                msg = self.buffer
+                self.buffer = b''
+                self.current_packet_size = struct.unpack('I', msg)[0]
+
+        if self.current_packet_size >= 0:
+            if self._receive_to_buffer(self.current_packet_size):
+                msg = self._get_buffer()
+                channel, packet = pickle.loads(msg)
+                if channel > 0:
+                    # notification => run handler
+                    handler = self.notification_handler.get(channel)
+                    if handler:
+                        handler(channel, packet)
+                else:
+                    # put packet to right receiver struct
+                    self.receiving_queries_queue.popleft()._set_response(packet)
+                return True
+
+        return False
+
+    def receive_all(self):
+        """
+        Processes all notifications and responses.
+        :return: If there was any notification or response.
+        """
+        ret = False
+        while self.receive():
+            ret = True
+        return ret
 
     def set_notification_handler(self, channel, func):
         """
@@ -155,6 +242,12 @@ class _ClientData:
             self.buffer += received_data
 
         return length == 0
+
+    def get_buffer(self):
+        msg = self.buffer
+        self.buffer = b''
+        self.current_packet_size = -1
+        return msg
 
 
 class Server:
@@ -202,12 +295,25 @@ class Server:
                         try:
                             if data.current_packet_size == -1:
                                 if data.receive_to_buffer(_packet_length_size):
-                                    pass
+                                    msg = data.buffer
+                                    data.buffer = b''
+                                    data.current_packet_size = struct.unpack('I', msg)[0]
                             else:
                                 if data.receive_to_buffer(data.current_packet_size):
-                                    pass
+                                    msg = data.get_buffer()
+                                    module, packet = pickle.loads(msg)
+                                    handler = self.query_handlers.get(module)
+                                    if handler:
+                                        result = handler(client_id, packet)
+                                    else:
+                                        result = None
+                                    # send result
+                                    # channel 0 => response to query
+                                    msg = pickle.dumps((0, result))
+                                    data.socket.send(struct.pack('I', len(msg)))
+                                    data.socket.send(msg)
                         except net.SocketDisconnected:
-                            # TODO - call handler
+                            if self.disconnect_handler: self.disconnect_handler(client_id)
                             self.selector.remove(data.socket)
                             clients_to_remove.add(client_id)
 
@@ -215,21 +321,20 @@ class Server:
                     if self.selector.is_ready(data.socket):
                         try:
                             if data.receive_to_buffer(_hello_message_size):
-                                msg = data.buffer
-                                data.buffer = b''
+                                msg = data.get_buffer()
                                 if msg[:len(_hello_message)] == _hello_message:
                                     try:
                                         api_version = int(pickle.loads(msg[len(_hello_message):]))
+                                        if self.api_version_checker(api_version):
+                                            data.socket.send(_accept_message.ljust(_hello_message_size, b'\x00'))
+                                            self.clients[client_id] = data
+                                            unaccepted_to_remove.add(client_id)
+                                            if self.accept_handler: self.accept_handler(client_id)
+                                        else:
+                                            data.socket.disconnect()
+                                            self.selector.remove(data.socket)
+                                            unaccepted_to_remove.add(client_id)
                                     except TypeError:
-                                        data.socket.disconnect()
-                                        self.selector.remove(data.socket)
-                                        unaccepted_to_remove.add(client_id)
-                                    if self.api_version_checker(api_version):
-                                        data.socket.send(_accept_message.ljust(_hello_message_size, b'\x00'))
-                                        self.clients[client_id] = data
-                                        unaccepted_to_remove.add(client_id)
-                                        if self.accept_handler: self.accept_handler(client_id)
-                                    else:
                                         data.socket.disconnect()
                                         self.selector.remove(data.socket)
                                         unaccepted_to_remove.add(client_id)
@@ -245,7 +350,6 @@ class Server:
                     del self.clients[client_id]
 
                 for client_id in unaccepted_to_remove:
-
                     del self.unaccepted[client_id]
 
                 if self.selector.is_ready(self.listener):
@@ -284,7 +388,7 @@ class Server:
         :param func: The function that is called when query is received.
         :return: An old query handler.
         """
-        old = self.query_handlers.get(module, default=None)
+        old = self.query_handlers.get(module)
         self.query_handlers[module] = func
         return old
 
@@ -298,15 +402,18 @@ class Server:
         self.disconnect_handler = func
         return old
 
-    def notify(self, client, channel, data):
+    def notify(self, client_id, channel, data):
         """
         Send notification to specified client.
-        :param client: Client to which send the notification.
+        :param client_id: Client to which send the notification.
         :param channel: Channel by which send the notification.
         :param data: Data to be sent.
         """
-        # TODO - send data to client
-        raise NotImplementedError
+        # send result
+        msg = pickle.dumps((channel, data))
+        client_data = self.clients[client_id]
+        client_data.socket.send(struct.pack('I', len(msg)))
+        client_data.socket.send(msg)
 
     def set_permission_checker(self, func):
         """
@@ -320,25 +427,130 @@ class Server:
 
 
 class NetworkTests(TestCase):
+    def connect_loop(self, connector, seconds):
+        for i in range(int(seconds * 10)):
+            if connector.is_connected: break
+            sleep(milliseconds(100))
+
     def test_connect(self):
         server = Server(lambda x: True)
         client = Client(123)
-        srv_th = Thread(target=Server.listen, args=(server, '127.0.0.1', 1234), daemon=False)
+        srv_th = Thread(target=Server.listen, args=(server, '127.0.0.1', 1236))
         srv_th.start()
 
-        c = client.connect('127.0.0.1', 1234)
-        for i in range(30):
-            if c.is_connected: break
-            sleep(milliseconds(100))
+        def stop_network(timeout):
+            client.disconnect()
+            server.close()
+            srv_th.join(timeout=timeout)
+
+        c = client.connect('127.0.0.1', 1236)
+        self.connect_loop(c, 3.)
         try:
             self.assertTrue(c.is_connected)
         except AssertionError:
-            client.disconnect()
-            server.close()
-            srv_th.join(timeout=2.)
+            stop_network(2.)
             raise
 
-        client.disconnect()
-        server.close()
-        srv_th.join(timeout=2.)
+        stop_network(2.)
+        self.assertFalse(srv_th.is_alive())
+
+    def test_query(self):
+        server = Server(lambda x: x == 1)
+        # some echo module ;-)
+        server.set_query_handler(7, lambda cid, msg: msg)
+        client = Client(1)
+        srv_th = Thread(target=Server.listen, args=(server, '127.0.0.1', 1235))
+        srv_th.start()
+
+        def stop_network(timeout):
+            client.disconnect()
+            server.close()
+            srv_th.join(timeout=timeout)
+
+        c = client.connect('127.0.0.1', 1235)
+        self.connect_loop(c, 3.)
+        try:
+            self.assertTrue(c.is_connected)
+        except AssertionError:
+            stop_network(2.)
+            raise
+
+        data = {'name': 'ASD'}
+        r = client.query(7, data)
+        obj = r.response
+        try:
+            self.assertDictEqual(obj, data)
+        except AssertionError:
+            stop_network(2.)
+            raise
+
+        stop_network(2.)
+        self.assertFalse(srv_th.is_alive())
+
+    def test_notifications(self):
+        """
+        Server is notificating everybody about other client entrances on channel 12.
+        """
+        server = Server(lambda x: x == 1)
+
+        def on_new_client(client_id):
+            # notify other clients
+            for cid in server.clients.keys():
+                if cid == client_id: continue
+                server.notify(cid, 12, {'new-client': client_id})
+
+        server.set_accept_handler(on_new_client)
+
+        consumer = Client(1)    # client wanting notification
+        producer = Client(1)    # client making notification sending
+
+        srv_th = Thread(target=Server.listen, args=(server, '127.0.0.1', 1234))
+        srv_th.start()
+
+        def stop_network(timeout):
+            consumer.disconnect()
+            producer.disconnect()
+            server.close()
+            srv_th.join(timeout=timeout)
+
+        # setup consumer
+        got_notification = False
+
+        def on_notification(channel, data):
+            if channel == 12 and 'new-client' in data:
+                nonlocal got_notification
+                got_notification = True
+        consumer.set_notification_handler(12, on_notification)
+
+        # connect consumer
+        c = consumer.connect('127.0.0.1', 1234)
+        self.connect_loop(c, 3.)
+        try:
+            self.assertTrue(c.is_connected)
+        except AssertionError:
+            stop_network(2.)
+            raise
+
+        # connected, so connect producer
+        c = producer.connect('127.0.0.1', 1234)
+        self.connect_loop(c, 3.)
+        try:
+            self.assertTrue(c.is_connected)
+        except AssertionError:
+            stop_network(2.)
+            raise
+
+        # we should get the notification right now
+        for i in range(30):
+            consumer.receive_all()
+            if got_notification: break
+            sleep(milliseconds(100))
+
+        try:
+            self.assertTrue(got_notification)
+        except AssertionError:
+            stop_network(2.)
+            raise
+
+        stop_network(2.)
         self.assertFalse(srv_th.is_alive())
