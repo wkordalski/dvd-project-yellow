@@ -22,5 +22,5 @@ setup(
     ],
     test_suite='tests.load_tests',
 
-    install_requires=['appdirs', 'sqlalchemy', 'yaml']
+    install_requires=['appdirs', 'sqlalchemy', 'pyyaml']
 )
