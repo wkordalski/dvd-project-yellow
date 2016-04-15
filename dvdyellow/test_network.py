@@ -3,7 +3,7 @@ from threading import Thread
 
 from sfml.system import sleep, milliseconds
 
-from network import *
+from dvdyellow.network import *
 
 
 class NetworkTests(TestCase):

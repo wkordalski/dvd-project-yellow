@@ -299,7 +299,8 @@ class Server:
                                     msg = data.get_buffer()
                                     module, packet = pickle.loads(msg)
                                     handler = self.query_handlers.get(module)
-                                    if handler and self.permission_checker(client_id, module):
+                                    if handler and \
+                                            (not self.permission_checker or self.permission_checker(client_id, module)):
                                         result = handler(client_id, packet)
                                     else:
                                         result = None
