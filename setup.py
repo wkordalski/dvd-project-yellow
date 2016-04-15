@@ -11,7 +11,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 
 setup(
-    name='dvdyellow',
+    name='DvdYellow',
     version='0.0.1',
     description='A simple logic game made by Eryk Kopczyński',
     long_description=long_description,
@@ -20,5 +20,7 @@ setup(
         'Development Status :: 1 - Planning',
         'Programming Language :: Python :: 3',
     ],
-    test_suite='tests.load_tests'
+    test_suite='tests.load_tests',
+
+    install_requires=['appdirs', 'sqlalchemy', 'yaml']
 )

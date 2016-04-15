@@ -1,13 +1,39 @@
 """
 Server manager and server modules will be implemented here.
 """
-from network import Server
+import logging
+import os
+import yaml
+
+from appdirs import AppDirs
+from .network import Server
 
 
 class ServerManager:
-    def __init__(self, port=42371):
+    def __init__(self, port=42371, local=True):
         self.server = Server(lambda x: x == 1)
         self.port = port
+        self.running = False
+        self.logger = logging.getLogger("ServerManager")
+
+        dirs = AppDirs('dvdyellow', appauthor='yellow-team', multipath=True)
+
+        # read config
+        self.config = None
+        config_paths = filter(None, dirs.user_config_dir.split(os.pathsep) + dirs.site_config_dir.split(os.pathsep))
+
+        for path in config_paths:
+            conf_file = os.path.join(path, 'server.yml')
+            if not os.path.isfile(conf_file): continue
+            try:
+                f = open(conf_file)
+                self.config = yaml.safe_load(f)
+            except IOError:
+                self.logger.error("Configuration file '%s' exists, but is not readable.", conf_file)
+                raise  # TODO - should be another exception...
+            except yaml.YAMLError as e:
+                self.logger.error("Error in configuration file: %s", e)
+                raise  # TODO - should be another exception...
 
         self.user_manager = UserManager(self.server)
 
