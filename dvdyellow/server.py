@@ -25,7 +25,8 @@ class ServerManager:
         self._setup_database()
 
         self.user_manager = UserManager(self.server, self.db_session)
-
+        self.waiting_room = waiting_room(self.server)
+        
     def _load_config_file(self, path):
         try:
             f = open(path)
@@ -190,17 +191,69 @@ class UserManager:
         elif data['command'] == 'sign-up':
             if not data['name'] :
                 return {'status': 'error', 'code': 'NO_USERNAME'}
-            if not data['password']
+            if not data['password']:
                 return {'status': 'error', 'code': 'NO_PASSWORD'}
             if self.database_session.query(User).filter(name==data['name']).first():
                 return {'status': 'error', 'code': 'LOGIN_TAKEN'}
-            database_session.User.insert().values({'name': data['name'], 'password': data['password']})
-            database_session.flush()
+            self.database_session.User.insert().values({'name': data['name'], 'password': data['password']})
+            self.database_session.flush()
             return {'status': 'ok'}
             
 
-        return None
+        return {'status': 'error', 'code': 'INVALID_COMMAND'}
 
 
 class WaitingRoomManager:
-    pass
+    def __init__(self, server, db_session):
+        """
+        Creates user manager.
+        :param server:
+        :return:
+        """
+        server.set_query_handler(4, query_handler)
+        
+        self.listeners = set()
+        self.users = dict()
+        
+    def _query_handler(self, client_id, data):
+        if 'command' not in data: return None
+        
+        if data['command'] == 'start-listening':
+            self.listeners.add(client_id)
+            return {'status': 'ok'}
+        
+        elif data['command'] == 'stop-listening'
+            if not client_id in self.listeners:
+                return {'status': 'error', 'code': 'CLIENT_NOT_LISTENING'}
+            self.listeners.discard(client_id)
+            return {'status': 'ok'}
+        
+        elif data['command'] == 'check-status'
+            if not data['username']:
+                return {'status': 'error', 'code': 'NO_USERNAME'}
+            elif not data['username'] in self.users:
+                return {'status': 'ok', 'user-status': 'disconected'}
+            return {'status': 'ok', 'user-status': users[data['username']]}
+         
+        elif data['command'] == 'set-status':
+            if not 'new-status' in data:
+                return {'status': 'error', 'code': 'NO_NEW_STATUS'}
+            if not 'name' in data:
+                return {'status': 'error', 'code': 'NO_USERNAME'}
+            if not 'id' in data:
+                return {'status': 'error', 'code': 'NO_USER_ID'}
+            if data['new-status'] == 'disconected' and client_id in self.listeners:
+                self.listeners.discard(client_id)
+            for i in self.listeners:
+                server.notify(i, 13, {'notification': 'status-change', 'user': data['name'],
+                    'id': data['id'], 'status': data['new-status']}
+            if data['new-status'] == 'disconected':
+                del self.users[client_id]
+            else:
+                self.users[client_id]=data['new-status']
+            return {'status': 'ok'}
+
+            
+        return {'status': 'error', 'code': 'INVALID_COMMAND'}
+
+
