@@ -118,7 +118,7 @@ class ServerManager:
 
 
 class _UserAuthenticationData:
-    def __init__(self):
+    def __init__(self, username, uid):
         self.username = username
         self.uid = uid
 
