@@ -13,7 +13,6 @@ class User(Database):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(64), unique=True)
-    fullname = Column(String)
     password = Column(String)
 
 
