@@ -167,9 +167,9 @@ class UserManager:
         if data['command'] == 'sign-in':
             if self.auth_status[client_id]:
                 return {'status': 'error', 'code': ' ALREADY_LOGGED_IN'}
-            if not data['name']:
+            if 'name' not in data:
                 return {'status': 'error', 'code': 'NO_USERNAME'}
-            if not data['password']:
+            if not 'password' not in data:
                 return {'status': 'error', 'code': 'NO_PASSWORD'}
             this_user = self.database_session.query(User).filter(name=data['name']).first()
             if not this_user:
@@ -195,15 +195,24 @@ class UserManager:
                 return {'status': 'ok', 'authenticated': False}
         
         elif data['command'] == 'sign-up':
-            if not data['name']:
+            if 'name' not in data:
                 return {'status': 'error', 'code': 'NO_USERNAME'}
-            if not data['password']:
+            if 'password' not in data:
                 return {'status': 'error', 'code': 'NO_PASSWORD'}
             if self.database_session.query(User).filter(name=data['name']).first():
                 return {'status': 'error', 'code': 'LOGIN_TAKEN'}
             self.database_session.User.insert().values({'name': data['name'], 'password': data['password']})
             self.database_session.flush()
             return {'status': 'ok'}
+
+        elif data['command'] == 'get-name':
+            if 'id' not in data:
+                return {'status':'error', 'code': 'NO_ID'}
+            this_user = self.database_session.query(User).filter(id=data['id']).first()
+            if this_user:
+                return {'status': 'ok', 'name': this_user.name}
+            else:
+                return {'status': 'error', 'code': 'NO_SUCH_USER'}
 
         return {'status': 'error', 'code': 'INVALID_COMMAND'}
 
@@ -265,5 +274,5 @@ class WaitingRoomManager:
 
         elif data['command'] == 'get-waiting-room':
             return {'status': 'ok', 'waiting-dict': self.users}
-        
+
         return {'status': 'error', 'code': 'INVALID_COMMAND'}
