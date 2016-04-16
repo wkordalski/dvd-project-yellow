@@ -169,7 +169,7 @@ class UserManager:
                 return {'status': 'error', 'code': ' ALREADY_LOGGED_IN'}
             if 'name' not in data:
                 return {'status': 'error', 'code': 'NO_USERNAME'}
-            if not 'password' not in data:
+            if 'password' not in data:
                 return {'status': 'error', 'code': 'NO_PASSWORD'}
             this_user = self.database_session.query(User).filter(name=data['name']).first()
             if not this_user:
