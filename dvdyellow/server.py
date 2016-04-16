@@ -7,33 +7,22 @@ import yaml
 from functools import reduce
 
 from appdirs import AppDirs
+from sqlalchemy.engine import create_engine
+from sqlalchemy.engine.url import URL
+from sqlalchemy.orm.session import sessionmaker
+
+from dvdyellow.orm import Database
 from .network import Server
 
 
 class ServerManager:
-    def __init__(self, target_configuration='local', config_file=None):
+    def __init__(self, target_configuration='local', config_file=None, config_object=None):
         self.server = Server(lambda x: x == 1)
         self.logger = logging.getLogger("ServerManager")
+        self.dirs = AppDirs('dvdyellow', appauthor='yellow-team', multipath=True)
 
-        dirs = AppDirs('dvdyellow', appauthor='yellow-team', multipath=True)
-
-        # read config
-        self.config = None
-        if not config_file:
-            config_paths = filter(None, dirs.user_config_dir.split(os.pathsep) + dirs.site_config_dir.split(os.pathsep))
-            self._load_configuration(config_paths)
-        else:
-            self._load_config_file(config_file)
-
-
-
-        target_cfg = self.config[target_configuration] if target_configuration in self.config else None
-        default_cfg = self.config['default'] if 'default' in self.config else None
-
-        # possible configurations - first is most important
-        self.configurations = list(filter(None, [target_cfg, default_cfg]))
-
-        self._setup_server_configuration()
+        self._setup_server_configuration(target_configuration, config_file, config_object)
+        self._setup_database()
 
         self.user_manager = UserManager(self.server)
 
@@ -54,37 +43,79 @@ class ServerManager:
             if not os.path.isfile(conf_file): continue
             self._load_config_file(conf_file)
 
-    def _get_config_entry(self, getter, default):
+    def get_config_entry(self, getter, default, is_empty_default=False):
         """
         Returns entry value from configuration.
         :param getter: Function getting value from configuration object or string with dot-separated ids.
         :param default: Default values if nowhere such entry is present.
+        :param is_empty_default: If value is an empty string and is_empty_default is set, returned is the default value.
         :return: The value of such entry.
         """
         if isinstance(getter, str):
             elts = getter.split('.')
             getter = lambda c: reduce(lambda d, k: d[k], elts, c)
 
-        for config in configurations:
+        for config in self.configurations:
             if not config: continue
             try:
-                return getter(config)
+                r = getter(config)
+                if r == '' and is_empty_default:
+                    return default
+                else:
+                    return r
             except KeyError:
                 pass
 
         return default
 
-    def _setup_server_configuration(self):
+    def _setup_server_configuration(self, target_configuration='local', config_file=None, config_object=None):
+        """
+        Sets-up server configuration - reads configuration files and parses some server options
+        :param target_configuration: Name of configuration to use.
+        :param config_file: Configuration file to read instead of the default one.
+        :param config_object: Configuration data put directly into server module.
+        """
+        if not config_file:
+            config_paths = self.dirs.user_config_dir.split(os.pathsep) + self.dirs.site_config_dir.split(os.pathsep)
+            self._load_configuration(filter(None, config_paths))
+        else:
+            self._load_config_file(config_file)
+
+        target_cfg = self.config[target_configuration] if self.config and target_configuration in self.config else None
+        default_cfg = self.config['default'] if self.config and 'default' in self.config else None
+        # configurations - first is most important
+        self.configurations = list(filter(None, [config_object, target_cfg, default_cfg]))
+
         #
         # NETWORK SETTINGS
         #
-        self.port = self._get_config_entry('network.port', 42371)
+        self.port = self.get_config_entry('network.port', 42371)
+
+        #
+        # DATABASE SETTINGS
+        #
+        self.db_url = URL(
+            self.get_config_entry('database.driver', 'sqlite'),
+            self.get_config_entry('database.username', None, is_empty_default=True),
+            self.get_config_entry('database.password', None, is_empty_default=True),
+            self.get_config_entry('database.host', None, is_empty_default=True),
+            self.get_config_entry('database.port', None, is_empty_default=True),
+            self.get_config_entry('database.name', None, is_empty_default=True),
+            self.get_config_entry('database.options', None, is_empty_default=True)
+        )
+
+    def _setup_database(self):
+        self.db = create_engine(self.db_url)
+        Database.metadata.create_all(self.db)
+
+        self.db_session = sessionmaker(bind=self.db)
 
     def run(self):
         """
         Runs server.
         """
         self.server.listen('0.0.0.0', self.port)
+
 
 class _UserAuthenticationData:
     def __init__(self):
