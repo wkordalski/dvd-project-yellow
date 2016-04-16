@@ -16,7 +16,7 @@ from .network import Server
 
 
 class ServerManager:
-    def __init__(self, target_configuration='local', config_file=None, config_object=None):
+    def __init__(self, target_configuration=None, config_file=None, config_object=None):
         self.server = Server(lambda x: x == 1)
         self.logger = logging.getLogger("ServerManager")
         self.dirs = AppDirs('dvdyellow', appauthor='yellow-team', multipath=True)
@@ -68,7 +68,7 @@ class ServerManager:
 
         return default
 
-    def _setup_server_configuration(self, target_configuration='local', config_file=None, config_object=None):
+    def _setup_server_configuration(self, target_configuration=None, config_file=None, config_object=None):
         """
         Sets-up server configuration - reads configuration files and parses some server options
         :param target_configuration: Name of configuration to use.
@@ -81,7 +81,10 @@ class ServerManager:
         else:
             self._load_config_file(config_file)
 
-        target_cfg = self.config[target_configuration] if self.config and target_configuration in self.config else None
+        if target_configuration and self.config:
+            target_cfg = self.config[target_configuration] if target_configuration in self.config else None
+        else:
+            target_cfg = None
         default_cfg = self.config['default'] if self.config and 'default' in self.config else None
         # configurations - first is most important
         self.configurations = list(filter(None, [config_object, target_cfg, default_cfg]))

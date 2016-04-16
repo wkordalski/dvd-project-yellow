@@ -20,6 +20,8 @@ setup(
         'Development Status :: 1 - Planning',
         'Programming Language :: Python :: 3',
     ],
+
+    packages=['dvdyellow'],
     test_suite='tests.load_tests',
 
     install_requires=['appdirs', 'sqlalchemy', 'pyyaml']

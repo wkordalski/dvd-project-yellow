@@ -4,12 +4,7 @@ Here would be objects that client will use to play the game.
 So classes like Board, WaitingRoom (from Client Game Interface)
 will be here implemented.
 """
-from network import Client
-
-
-def connect_client(address, port=42371):
-    client = Client(1)
-    return client.connect(address, port)
+from .network import Client
 
 
 class AsyncQuery:
@@ -27,9 +22,15 @@ class AsyncQuery:
         return self.result_getter()
 
 
-class Server:
-    def __init__(self, connector):
-        self.client = connector.client
+def make_session(address, port=42371):
+    client = Client(1)
+    r = client.connect(address, port)
+    return AsyncQuery(lambda: r.check(), lambda: Session(client))
+
+
+class Session:
+    def __init__(self, client):
+        self.client = client
 
     def sign_in(self, login, password):
         data = {
@@ -38,9 +39,9 @@ class Server:
             'password': password
         }
         r = self.client.query(3, data)
-        return AsyncQuery(lambda: r.check(), lambda: True if r.response == True else False)
+        return AsyncQuery(lambda: r.check(), lambda: True if r.response is True else False)
 
-    def get_logged_user(self):
+    def get_signed_in_user(self):
         data = {
             'command': 'get-status'
         }
