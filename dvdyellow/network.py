@@ -1,3 +1,4 @@
+import logging
 import pickle
 import struct
 from collections import deque
@@ -10,6 +11,8 @@ _hello_message = b'dvdyellow hello: '
 _accept_message = b'dvdyellow accepted'
 
 _packet_length_size = 4
+
+_logger = logging.getLogger("Network")
 
 
 class Client:
@@ -130,12 +133,14 @@ class Client:
 
             def check(self):
                 while not self._has_response:
-                    if not self.client.receive(): return False
+                    if not self.client.receive():
+                        return False
                 return True
 
             @property
             def response(self):
-                while not self.check(): pass
+                while not self.check():
+                    pass
                 return self._response_object
 
             def _set_response(self, value):
@@ -190,7 +195,7 @@ class Client:
                     if handler:
                         handler(channel, packet)
                 else:
-                    # put packet to right receiver struct
+                    # put packet to right receiver structure
                     self.receiving_queries_queue.popleft()._set_response(packet)
                 return True
 
@@ -283,7 +288,7 @@ class Server:
 
     def _work(self):
         while self.working:
-            if self.selector.wait(sf.seconds(1)):
+            if self.selector.wait(sf.milliseconds(100)):
                 clients_to_remove = set()
                 unaccepted_to_remove = set()
                 for client_id, data in self.clients.items():
@@ -309,8 +314,10 @@ class Server:
                                     msg = pickle.dumps((0, result))
                                     data.socket.send(struct.pack('I', len(msg)))
                                     data.socket.send(msg)
+                                    data.current_packet_size = -1
                         except net.SocketDisconnected:
-                            if self.disconnect_handler: self.disconnect_handler(client_id)
+                            if self.disconnect_handler:
+                                self.disconnect_handler(client_id)
                             self.selector.remove(data.socket)
                             clients_to_remove.add(client_id)
 
@@ -325,8 +332,10 @@ class Server:
                                         if self.api_version_checker(api_version):
                                             data.socket.send(_accept_message.ljust(_hello_message_size, b'\x00'))
                                             self.clients[client_id] = data
+                                            data.current_packet_size = -1
                                             unaccepted_to_remove.add(client_id)
-                                            if self.accept_handler: self.accept_handler(client_id)
+                                            if self.accept_handler:
+                                                self.accept_handler(client_id)
                                         else:
                                             data.socket.disconnect()
                                             self.selector.remove(data.socket)

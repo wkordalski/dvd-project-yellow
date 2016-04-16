@@ -17,12 +17,15 @@ class User(Database):
 
 
 class GameBoard(Database):
-	__tablename__ = 'gameboards'
-	
-	id = Column(Integer, primary_key=True)
-	name = Column(String(64), unique=True)
-	author_name = Column(String)
-	width = Column(Integer)
-	height = Column(Integer)
-	shapestring = Column(String)
-	
+    __tablename__ = 'gameboards'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(64), unique=True)
+    author_name = Column(String)
+    width = Column(Integer)
+    height = Column(Integer)
+    shapestring = Column(String)
+
+
+def create_schemes(engine):
+    Database.metadata.create_all(engine)

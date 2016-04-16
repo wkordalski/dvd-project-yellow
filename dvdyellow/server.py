@@ -3,6 +3,7 @@ Server manager and server modules will be implemented here.
 """
 import logging
 import os
+
 import yaml
 from functools import reduce
 
@@ -11,7 +12,8 @@ from sqlalchemy.engine import create_engine
 from sqlalchemy.engine.url import URL
 from sqlalchemy.orm.session import sessionmaker
 
-from .orm import Database, User
+from dvdyellow.orm import create_schemes
+from .orm import User
 from .network import Server
 
 
@@ -26,11 +28,14 @@ class ServerManager:
 
         self.user_manager = UserManager(self.server, self.db_session)
         self.waiting_room = WaitingRoomManager(self.server)
-        
+
+        self.on_run = None
+
     def _load_config_file(self, path):
         try:
             f = open(path)
             self.config = yaml.safe_load(f)
+            f.close()
         except IOError:
             self.logger.error("Configuration file '%s' exists, but is not readable.", path)
             raise  # TODO - should be another exception...
@@ -114,15 +119,27 @@ class ServerManager:
 
     def _setup_database(self):
         self.db = create_engine(self.db_url)
-        Database.metadata.create_all(self.db)
+        self.db_connection = self.db.connect()
+        create_schemes(self.db)
 
-        self.db_session = sessionmaker(bind=self.db)
+        self.db_session_type = sessionmaker(bind=self.db)
+        self.db_session = self.db_session_type()
 
     def run(self):
         """
         Runs server.
         """
+        if self.on_run:
+            self.on_run()
         self.server.listen('0.0.0.0', self.port)
+
+        self._finalize()
+
+    def stop(self):
+        self.server.close()
+
+    def _finalize(self):
+        self.db_connection.close()
 
 
 class _UserAuthenticationData:
@@ -165,13 +182,14 @@ class UserManager:
             return None
 
         if data['command'] == 'sign-in':
-            if self.auth_status[client_id]:
+            if self.auth_status.get(client_id):
                 return {'status': 'error', 'code': ' ALREADY_LOGGED_IN'}
-            if not data['name']:
+            if data.get('username') is None:
                 return {'status': 'error', 'code': 'NO_USERNAME'}
-            if not data['password']:
+            if data.get('password') is None:
                 return {'status': 'error', 'code': 'NO_PASSWORD'}
-            this_user = self.database_session.query(User).filter(name=data['name']).first()
+            this_user = self.database_session.query(User).filter(User.name == data['username']).first()
+            self.database_session.flush()
             if not this_user:
                 return {'status': 'error', 'code': 'NO_SUCH_USER'}
             if this_user.password == data['password']:
