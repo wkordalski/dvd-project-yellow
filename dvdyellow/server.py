@@ -213,15 +213,24 @@ class UserManager:
                 return {'status': 'ok', 'authenticated': False}
         
         elif data['command'] == 'sign-up':
-            if not data['name']:
+            if 'name' not in data:
                 return {'status': 'error', 'code': 'NO_USERNAME'}
-            if not data['password']:
+            if 'password' not in data:
                 return {'status': 'error', 'code': 'NO_PASSWORD'}
             if self.database_session.query(User).filter(name=data['name']).first():
                 return {'status': 'error', 'code': 'LOGIN_TAKEN'}
             self.database_session.User.insert().values({'name': data['name'], 'password': data['password']})
             self.database_session.flush()
             return {'status': 'ok'}
+
+        elif data['command'] == 'get-name':
+            if 'id' not in data:
+                return {'status':'error', 'code': 'NO_ID'}
+            this_user = self.database_session.query(User).filter(id=data['id']).first()
+            if this_user:
+                return {'status': 'ok', 'name': this_user.name}
+            else:
+                return {'status': 'error', 'code': 'NO_SUCH_USER'}
 
         return {'status': 'error', 'code': 'INVALID_COMMAND'}
 
@@ -256,12 +265,12 @@ class WaitingRoomManager:
             self.listeners.discard(client_id)
             return {'status': 'ok'}
         
-        elif data['command'] == 'check-status':
-            if not data['username']:
-                return {'status': 'error', 'code': 'NO_USERNAME'}
-            elif data['username'] not in self.users:
+        elif data['command'] == 'get-status':
+            if 'id' not in data:
+                return {'status': 'error', 'code': 'NO_USERID'}
+            elif data['id'] not in self.users:
                 return {'status': 'ok', 'user-status': 'disconnected'}
-            return {'status': 'ok', 'user-status': self.users[data['username']]}
+            return {'status': 'ok', 'user-status': self.users[data['id']]}
          
         elif data['command'] == 'set-status':
             if 'new-status' not in data:
@@ -276,9 +285,12 @@ class WaitingRoomManager:
                 self.server.notify(i, 13, {'notification': 'status-change', 'user': data['name'],
                                            'id': data['id'], 'status': data['new-status']})
             if data['new-status'] == 'disconnected':
-                del self.users[client_id]
+                del self.users[data['id']]
             else:
-                self.users[client_id] = data['new-status']
+                self.users[data['id']] = data['new-status']
             return {'status': 'ok'}
-            
+
+        elif data['command'] == 'get-waiting-room':
+            return {'status': 'ok', 'waiting-dict': self.users}
+
         return {'status': 'error', 'code': 'INVALID_COMMAND'}
