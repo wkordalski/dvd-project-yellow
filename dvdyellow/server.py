@@ -248,7 +248,7 @@ class WaitingRoomManager:
             return {'status': 'ok'}
         
         elif data['command'] == 'get-status':
-            if not 'id' in data:
+            if 'id' not in data:
                 return {'status': 'error', 'code': 'NO_USERID'}
             elif data['id'] not in self.users:
                 return {'status': 'ok', 'user-status': 'disconnected'}
