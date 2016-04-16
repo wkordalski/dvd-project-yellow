@@ -204,7 +204,7 @@ class UserManager:
 
 
 class WaitingRoomManager:
-    def __init__(self, server, db_session):
+    def __init__(self, server):
         """
         Creates user manager.
         :param server:
@@ -214,6 +214,7 @@ class WaitingRoomManager:
         
         self.listeners = set()
         self.users = dict()
+        self.server = server
         
     def _query_handler(self, client_id, data):
         if 'command' not in data: return None
