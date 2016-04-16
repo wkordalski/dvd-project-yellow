@@ -119,11 +119,9 @@ class ServerManager:
 
 class _UserAuthenticationData:
     def __init__(self):
-        self.username = ''
-
-    def authenticate(self, username, uid):
         self.username = username
         self.uid = uid
+
 
 
 
@@ -151,10 +149,10 @@ class UserManager:
         if module == 3:
             return True
 
-        if client_id not in self.auth_status:
-            return False
-
-        return self.auth_status[client_id].authenticated
+        if client_id in self.auth_status:
+            return True
+            
+        return False
 
     def _query_handler(self, client_id, data):
         if 'command' not in data: return None
@@ -168,13 +166,12 @@ class UserManager:
                 return {'status': 'error', 'code': 'NO_PASSWORD'}
             this_user = self.database_session.query(User).filter(name==data['name']).first()
             if not this_user:
-				return {'status': 'error', 'code': 'NO_SUCH_USER'}
+                return {'status': 'error', 'code': 'NO_SUCH_USER'}
             if this_user.password == data['password']:
-                self.auth_status[client_id] = UserAuthenticationData()
-                self.auth_status[client_id].authenticate(this_user.name, this_user.id)
+                self.auth_status[client_id] = UserAuthenticationData(this_user.name, this_user.id)
                 return {'status': 'ok'}
             else:
-				return {'status': 'error', 'code': 'WRONG_PASSWORD'}
+                return {'status': 'error', 'code': 'WRONG_PASSWORD'}
             
         elif data['command'] == 'sign-out':
             if client_id in self.auth_status:
@@ -186,21 +183,20 @@ class UserManager:
         elif data['command'] == 'get-status':
             if client_id in self.auth_status:
                 user_data = self.auth_status[client_id]
-                if user_data:
-                    return {'status': 'ok', 'authenticated': True, 'username': user_data.username, 'id': user_data.uid}
+                return {'status': 'ok', 'authenticated': True, 'username': user_data.username, 'id': user_data.uid}
             else:
                 return {'status': 'ok', 'authenticated': False}
         
-        elif data['command'] == 'register':
-			if not data['name'] :
+        elif data['command'] == 'sign-up':
+            if not data['name'] :
                 return {'status': 'error', 'code': 'NO_USERNAME'}
             if not data['password']
                 return {'status': 'error', 'code': 'NO_PASSWORD'}
             if self.database_session.query(User).filter(name==data['name']).first():
-				return {'status': 'error', 'code': 'LOGIN_TAKEN'}
-			database_session.User.insert().values({'name': data['name'], 'password': data['password']})
-			database_session.flush()
-			return {'status': 'ok'}
+                return {'status': 'error', 'code': 'LOGIN_TAKEN'}
+            database_session.User.insert().values({'name': data['name'], 'password': data['password']})
+            database_session.flush()
+            return {'status': 'ok'}
             
 
         return None
