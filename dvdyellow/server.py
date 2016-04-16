@@ -11,7 +11,7 @@ from sqlalchemy.engine import create_engine
 from sqlalchemy.engine.url import URL
 from sqlalchemy.orm.session import sessionmaker
 
-from dvdyellow.orm import Database
+from .orm import Database, User
 from .network import Server
 
 
@@ -25,7 +25,7 @@ class ServerManager:
         self._setup_database()
 
         self.user_manager = UserManager(self.server, self.db_session)
-        self.waiting_room = waiting_room(self.server)
+        self.waiting_room = WaitingRoomManager(self.server)
         
     def _load_config_file(self, path):
         try:
@@ -41,7 +41,8 @@ class ServerManager:
     def _load_configuration(self, directories):
         for path in directories:
             conf_file = os.path.join(path, 'server.yml')
-            if not os.path.isfile(conf_file): continue
+            if not os.path.isfile(conf_file):
+                continue
             self._load_config_file(conf_file)
 
     def get_config_entry(self, getter, default, is_empty_default=False):
@@ -53,11 +54,14 @@ class ServerManager:
         :return: The value of such entry.
         """
         if isinstance(getter, str):
-            elts = getter.split('.')
-            getter = lambda c: reduce(lambda d, k: d[k], elts, c)
+            path_elements = getter.split('.')
+
+            def getter(c):
+                return reduce(lambda d, k: d[k], path_elements, c)
 
         for config in self.configurations:
-            if not config: continue
+            if not config:
+                continue
             try:
                 r = getter(config)
                 if r == '' and is_empty_default:
@@ -127,8 +131,6 @@ class _UserAuthenticationData:
         self.uid = uid
 
 
-
-
 class UserManager:
     def __init__(self, server, db_session):
         """
@@ -159,20 +161,21 @@ class UserManager:
         return False
 
     def _query_handler(self, client_id, data):
-        if 'command' not in data: return None
+        if 'command' not in data:
+            return None
 
         if data['command'] == 'sign-in':
             if self.auth_status[client_id]:
-                return {'status': 'error', 'code':' ALREADY_LOGGED_IN'}
-            if not data['name'] :
+                return {'status': 'error', 'code': ' ALREADY_LOGGED_IN'}
+            if not data['name']:
                 return {'status': 'error', 'code': 'NO_USERNAME'}
-            if not data['password']
+            if not data['password']:
                 return {'status': 'error', 'code': 'NO_PASSWORD'}
-            this_user = self.database_session.query(User).filter(name==data['name']).first()
+            this_user = self.database_session.query(User).filter(name=data['name']).first()
             if not this_user:
                 return {'status': 'error', 'code': 'NO_SUCH_USER'}
             if this_user.password == data['password']:
-                self.auth_status[client_id] = UserAuthenticationData(this_user.name, this_user.id)
+                self.auth_status[client_id] = _UserAuthenticationData(this_user.name, this_user.id)
                 return {'status': 'ok'}
             else:
                 return {'status': 'error', 'code': 'WRONG_PASSWORD'}
@@ -182,7 +185,7 @@ class UserManager:
                 del self.auth_status[client_id]
                 return {'status': 'ok'}
             else:
-                return {'status': 'error', 'code':'NOT_SIGNED_IN'}
+                return {'status': 'error', 'code': 'NOT_SIGNED_IN'}
                 
         elif data['command'] == 'get-status':
             if client_id in self.auth_status:
@@ -192,16 +195,15 @@ class UserManager:
                 return {'status': 'ok', 'authenticated': False}
         
         elif data['command'] == 'sign-up':
-            if not data['name'] :
+            if not data['name']:
                 return {'status': 'error', 'code': 'NO_USERNAME'}
             if not data['password']:
                 return {'status': 'error', 'code': 'NO_PASSWORD'}
-            if self.database_session.query(User).filter(name==data['name']).first():
+            if self.database_session.query(User).filter(name=data['name']).first():
                 return {'status': 'error', 'code': 'LOGIN_TAKEN'}
             self.database_session.User.insert().values({'name': data['name'], 'password': data['password']})
             self.database_session.flush()
             return {'status': 'ok'}
-            
 
         return {'status': 'error', 'code': 'INVALID_COMMAND'}
 
@@ -213,6 +215,9 @@ class WaitingRoomManager:
         :param server:
         :return:
         """
+        def query_handler(client_id, data):
+            self._query_handler(client_id, data)
+
         server.set_query_handler(4, query_handler)
         
         self.listeners = set()
@@ -220,44 +225,42 @@ class WaitingRoomManager:
         self.server = server
         
     def _query_handler(self, client_id, data):
-        if 'command' not in data: return None
+        if 'command' not in data:
+            return None
         
         if data['command'] == 'start-listening':
             self.listeners.add(client_id)
             return {'status': 'ok'}
         
-        elif data['command'] == 'stop-listening'
-            if not client_id in self.listeners:
+        elif data['command'] == 'stop-listening':
+            if client_id not in self.listeners:
                 return {'status': 'error', 'code': 'CLIENT_NOT_LISTENING'}
             self.listeners.discard(client_id)
             return {'status': 'ok'}
         
-        elif data['command'] == 'check-status'
+        elif data['command'] == 'check-status':
             if not data['username']:
                 return {'status': 'error', 'code': 'NO_USERNAME'}
-            elif not data['username'] in self.users:
-                return {'status': 'ok', 'user-status': 'disconected'}
-            return {'status': 'ok', 'user-status': users[data['username']]}
+            elif data['username'] not in self.users:
+                return {'status': 'ok', 'user-status': 'disconnected'}
+            return {'status': 'ok', 'user-status': self.users[data['username']]}
          
         elif data['command'] == 'set-status':
-            if not 'new-status' in data:
+            if 'new-status' not in data:
                 return {'status': 'error', 'code': 'NO_NEW_STATUS'}
-            if not 'name' in data:
+            if 'name' not in data:
                 return {'status': 'error', 'code': 'NO_USERNAME'}
-            if not 'id' in data:
+            if 'id' not in data:
                 return {'status': 'error', 'code': 'NO_USER_ID'}
-            if data['new-status'] == 'disconected' and client_id in self.listeners:
+            if data['new-status'] == 'disconnected' and client_id in self.listeners:
                 self.listeners.discard(client_id)
             for i in self.listeners:
-                server.notify(i, 13, {'notification': 'status-change', 'user': data['name'],
-                    'id': data['id'], 'status': data['new-status']}
-            if data['new-status'] == 'disconected':
+                self.server.notify(i, 13, {'notification': 'status-change', 'user': data['name'],
+                                           'id': data['id'], 'status': data['new-status']})
+            if data['new-status'] == 'disconnected':
                 del self.users[client_id]
             else:
-                self.users[client_id]=data['new-status']
+                self.users[client_id] = data['new-status']
             return {'status': 'ok'}
-
             
         return {'status': 'error', 'code': 'INVALID_COMMAND'}
-
-
