@@ -64,13 +64,34 @@ class Widget:
         pass
 
 
-class Button(Widget):
-    def __init__(self, parent, text, position, size):
+class SimpleWidget(Widget):
+    def __init__(self, parent, position, size):
         self.position = position
         self.size = size
+        self.parent = parent
+
+
+    def is_point_over(self, point):
+        x, y = point
+        x1, y1 = self.position
+        x2, y2 = self.size
+        x2 += x1
+        y2 += y1
+        return x1 <= x < x2 and y1 <= y < y2
+
+    def focus(self):
+        self.on_focus()
+        self.parent.focus(self)
+
+    def blur(self):
+        self.on_blur()
+
+
+class Button(SimpleWidget):
+    def __init__(self, parent, text, position, size):
+        super(Button, self).__init__(parent, position, size)
         self.text = text
         self.on_click_handler = None
-        self.parent = parent
 
         x, y = position
         w, h = size
@@ -89,14 +110,6 @@ class Button(Widget):
         lx, ly, lw, lh = self.text_shape.local_bounds
         self.text_shape.origin = sf.Vector2((lw+lx)/2, (lh+ly)/2)
 
-    def is_point_over(self, point):
-        x, y = point
-        x1, y1 = self.position
-        x2, y2 = self.size
-        x2 += x1
-        y2 += y1
-        return x1 <= x < x2 and y1 <= y < y2
-
     def draw(self, canvas):
         canvas.draw(self.rectangle_shape)
         canvas.draw(self.text_shape)
@@ -112,22 +125,14 @@ class Button(Widget):
     def on_blur(self):
         self.rectangle_shape.fill_color = sf.Color(255, 0, 0, 190)
 
-    def focus(self):
-        self.on_focus()
-        self.parent.focus(self)
 
-    def blur(self):
-        self.on_blur()
-
-
-class TextBox(Widget):
+class TextBox(SimpleWidget):
     def __init__(self, parent, position, size, placeholder_text=''):
-        self.position = position
-        self.size = size
+        super(TextBox, self).__init__(parent, position, size)
         self.placeholder_text = placeholder_text
         self.text = ''
         self.on_click_handler = None
-        self.parent = parent
+        self.max_length = 1024
 
         x, y = position
         w, h = size
@@ -142,18 +147,18 @@ class TextBox(Widget):
         self.text_shape.character_size = 30
         self.text_shape.color = sf.Color.BLACK
 
+        self._refresh_text()
+
     def _refresh_text(self):
-        self.text_shape.string = self.text
+        if self.text == '':
+            self.text_shape.string = self.placeholder_text
+            self.text_shape.color = sf.Color(128, 128, 128)
+        else:
+            self.text_shape.string = self.text
+            self.text_shape.color = sf.Color.BLACK
+
         lx, ly, lw, lh = self.text_shape.local_bounds
         self.text_shape.origin = sf.Vector2(0, (lh+ly)/2)
-
-    def is_point_over(self, point):
-        x, y = point
-        x1, y1 = self.position
-        x2, y2 = self.size
-        x2 += x1
-        y2 += y1
-        return x1 <= x < x2 and y1 <= y < y2
 
     def draw(self, canvas):
         canvas.draw(self.rectangle_shape)
@@ -166,10 +171,14 @@ class TextBox(Widget):
         if character == '\b':
             if len(self.text) > 0:
                 self.text = self.text[:-1]
-        elif character in ['\n', '\t']:
+        elif character in ['\n', '\t', '\r']:
             pass
+        elif ord(character) < 32:
+            pass
+        elif len(self.text) < self.max_length:
+                self.text += character
         else:
-            self.text += character
+            pass
 
         self._refresh_text()
 
@@ -179,17 +188,16 @@ class TextBox(Widget):
     def on_blur(self):
         self.rectangle_shape.fill_color = sf.Color(255, 0, 0, 190)
 
-    def focus(self):
-        self.on_focus()
-        self.parent.focus(self)
-
-    def blur(self):
-        self.on_blur()
-
 
 class PasswordBox(TextBox):
     def _refresh_text(self):
-        self.text_shape.string = "*" * len(self.text)
+        if self.text == '':
+            self.text_shape.string = self.placeholder_text
+            self.text_shape.color = sf.Color(128, 128, 128)
+        else:
+            self.text_shape.string = "*" * len(self.text)
+            self.text_shape.color = sf.Color.BLACK
+
         lx, ly, lw, lh = self.text_shape.local_bounds
         self.text_shape.origin = sf.Vector2(0, (lh+ly)/2)
 
@@ -254,8 +262,10 @@ class SignInView(View):
 
         self.background = Image(self, 'back.jpg', (0,0))
 
-        self.txt_login = TextBox(self, (100, 100), (200, 48))
-        self.txt_password = PasswordBox(self, (100, 180), (200, 48))
+        self.txt_login = TextBox(self, (100, 100), (200, 48), placeholder_text='Login')
+        self.txt_login.max_length = 8
+        self.txt_password = PasswordBox(self, (100, 180), (200, 48), placeholder_text='Password')
+        self.txt_password.max_length = 22
 
         self.btn_ok = Button(self, "OK", (100, 260), (200, 48))
         self.btn_cancel = Button(self, "Menu", (100, 340), (200, 48))
@@ -274,8 +284,10 @@ class SignUpView(View):
 
         self.background = Image(self, 'back.jpg', (0,0))
 
-        self.txt_login = TextBox(self, (100, 100), (200, 48))
-        self.txt_password = PasswordBox(self, (100, 180), (200, 48))
+        self.txt_login = TextBox(self, (100, 100), (200, 48), placeholder_text='Login')
+        self.txt_login.max_length = 8
+        self.txt_password = PasswordBox(self, (100, 180), (200, 48), placeholder_text='Password')
+        self.txt_password.max_length = 22
 
         self.btn_ok = Button(self, "OK", (100, 260), (200, 48))
         self.btn_cancel = Button(self, "Menu", (100, 340), (200, 48))
