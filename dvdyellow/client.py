@@ -1,12 +1,14 @@
+import os
+
 import sfml as sf
 
-
-font = sf.Font.from_file("celtic.ttf")
-font2 = sf.Font.from_file("arial.ttf")
+data_directory = 'data'
+font = sf.Font.from_file(os.path.join(data_directory, "celtic.ttf"))
+font2 = sf.Font.from_file(os.path.join(data_directory, "arial.ttf"))
 
 # przycisk o wymiarach 250x60
 def przycisk(napis, x, y, minus_y, jasnosc):
-    pole = sf.Sprite(sf.Texture.from_file("czerwony.JPG"))
+    pole = sf.Sprite(sf.Texture.from_file(os.path.join(data_directory, "czerwony.JPG")))
     pole.texture_rectangle = sf.Rectangle((10, 10), (250, 60))
     pole.color = sf.Color(255, 255, 255, jasnosc)  # RGB, jasność
     pole.position = sf.Vector2(x-125, y-30)
@@ -33,7 +35,7 @@ def main():
     window = sf.RenderWindow(sf.VideoMode(w, h), "DVD Project Yellow Client")
     window.vertical_synchronization = True
 
-    ground = sf.Sprite(sf.Texture.from_file("back.jpg"))
+    ground = sf.Sprite(sf.Texture.from_file(os.path.join(data_directory, "back.jpg")))
 
     #Pola klikalne na stronie startowej
     log, log_txt = przycisk("Log in", 400, 330, 20, 255)
