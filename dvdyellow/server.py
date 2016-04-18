@@ -213,13 +213,13 @@ class UserManager:
                 return {'status': 'ok', 'authenticated': False}
         
         elif data['command'] == 'sign-up':
-            if 'name' not in data:
+            if 'username' not in data:
                 return {'status': 'error', 'code': 'NO_USERNAME'}
             if 'password' not in data:
                 return {'status': 'error', 'code': 'NO_PASSWORD'}
-            if self.database_session.query(User).filter(name=data['name']).first():
+            if self.database_session.query(User).filter(User.name == data['username']).first():
                 return {'status': 'error', 'code': 'LOGIN_TAKEN'}
-            self.database_session.User.insert().values({'name': data['name'], 'password': data['password']})
+            self.database_session.add(User(name=data['username'], password=data['password']))
             self.database_session.flush()
             return {'status': 'ok'}
 

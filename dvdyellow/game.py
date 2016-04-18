@@ -52,7 +52,34 @@ class Session:
         return AsyncQuery(lambda: r.check(), result_processor)
 
     def sign_out(self):
-        pass
+        data = {
+            'command': 'sign-out'
+        }
+        r = self.client.query(3, data)
+
+        def result_processor():
+            if r.response['status'] == 'ok':
+                return True
+            else:
+                return False
+
+        return AsyncQuery(lambda: r.check(), result_processor)
+
+    def sign_up(self, login, password):
+        data = {
+            'command': 'sign-up',
+            'username': login,
+            'password': password
+        }
+        r = self.client.query(3, data)
+
+        def result_processor():
+            if r.response['status'] == 'ok':
+                return True
+            else:
+                return False
+
+        return AsyncQuery(lambda: r.check(), result_processor)
 
     def get_signed_in_user(self):
         data = {
@@ -62,7 +89,7 @@ class Session:
 
         def result_processor():
             if r.response['status'] == 'ok' and r.response['authenticated']:
-                return User(r.response['id'])
+                return User(self, r.response['id'])
             else:
                 return None
 
@@ -70,5 +97,31 @@ class Session:
 
 
 class User:
-    def __init__(self, user_id):
+    def __init__(self, session, user_id):
         self._uid = user_id
+        self.session = session
+
+    @property
+    def id(self):
+        return self._uid
+
+    @property
+    def name(self):
+        if self.name is None:
+            data = {
+                'command': 'get-name',
+                'id': self._uid
+            }
+            r = self.session.client.query(3, data)
+
+            def result_processor():
+                if r.response['status'] == 'ok':
+                    self.name = r.response['name']
+                    return self.name
+                else:
+                    assert False
+
+            return AsyncQuery(lambda: r.check(), result_processor)
+
+        else:
+            return AsyncQuery(lambda: True, lambda: self.name)

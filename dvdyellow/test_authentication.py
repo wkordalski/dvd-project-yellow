@@ -48,41 +48,57 @@ class AuthenticationTests(TestCase):
         """
         session = make_session('localhost', AuthenticationTests.port).result
         session.sign_in('john', 'best123')
-        self.assertTrue(session.get_signed_in_user().result, "User haven't logged in.")
+        self.assertIsNotNone(session.get_signed_in_user().result, "User haven't logged in.")
         session.sign_out()
 
     def test_sign_in_wrong_username(self):
         """
         Tries to sign in to a not existing account.
         """
-        pass
+        session = make_session('localhost', AuthenticationTests.port).result
+        session.sign_in('johnny', 'best123')
+        self.assertIsNone(session.get_signed_in_user().result, "User have logged in.")
 
     def test_sign_in_wrong_password(self):
         """
         Tries to sign in with correct username and wrong password.
         """
-        pass
+        session = make_session('localhost', AuthenticationTests.port).result
+        session.sign_in('john', 'wrong_password')
+        self.assertIsNone(session.get_signed_in_user().result, "User have logged in.")
 
     def test_sign_up(self):
         """
         Tries to sign up with correct username.
         """
-        pass
+        session = make_session('localhost', AuthenticationTests.port).result
+        self.assertTrue(session.sign_up('me', 'good_password').result, "Signing up failed")
+        session.sign_in('me', 'good_password')
+        self.assertIsNotNone(session.get_signed_in_user().result, "User haven't logged in.")
+        session.sign_out()
 
     def test_sign_up_used_username(self):
         """
         Tries to sign up with used username.
         """
-        pass
+        session = make_session('localhost', AuthenticationTests.port).result
+        self.assertFalse(session.sign_up('john', 'good_password').result, "Signing up succeeded")
 
     def test_sign_up_empty_password(self):
         """
         Tries to sign up with empty password (should pass)
         """
-        pass
+        session = make_session('localhost', AuthenticationTests.port).result
+        self.assertTrue(session.sign_up('me', '').result, "Signing up failed")
+        session.sign_in('me', '')
+        self.assertIsNotNone(session.get_signed_in_user().result, "User haven't logged in.")
+        session.sign_out()
+
 
     def test_sign_up_empty_username(self):
         """
         Tries to sign up with empty username (should not pass)
         """
-        pass
+        session = make_session('localhost', AuthenticationTests.port).result
+        self.assertFalse(session.sign_up('', 'good_password').result, "Signing up succeeded.")
+
