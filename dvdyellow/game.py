@@ -34,6 +34,15 @@ def make_session(address, port=42371):
 class Session:
     def __init__(self, client):
         self.client = client
+        self.known_users = dict()
+
+    def _make_user(self, uid):
+        if uid not in self.known_users:
+            self.known_users[uid] = User(self, uid)
+        return self.known_users[uid]
+
+    def process_events(self):
+        self.client.receive_all()
 
     def sign_in(self, login, password):
         data = {
@@ -89,7 +98,7 @@ class Session:
 
         def result_processor():
             if r.response['status'] == 'ok' and r.response['authenticated']:
-                return User(self, r.response['id'])
+                return self._make_user(r.response['id'])
             else:
                 return None
 
