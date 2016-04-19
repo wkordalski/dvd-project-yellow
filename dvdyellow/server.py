@@ -7,13 +7,14 @@ import os
 import yaml
 from functools import reduce
 
+import random
 from appdirs import AppDirs
 from sqlalchemy.engine import create_engine
 from sqlalchemy.engine.url import URL
 from sqlalchemy.orm.session import sessionmaker
 
 from dvdyellow.orm import create_schemes
-from .orm import User
+from .orm import User, GameBoard, GamePawn
 from .network import Server
 
 
@@ -28,6 +29,7 @@ class ServerManager:
 
         self.user_manager = UserManager(self.server, self.db_session)
         self.waiting_room = WaitingRoomManager(self.server)
+        self.game_manager = GameManager(self.server, self.user_manager, self.db_session)
 
         self.on_run = None
 
@@ -167,6 +169,7 @@ class UserManager:
         
         self.database_session = db_session
         self.auth_status = dict()
+        self.client_users = dict()
 
     def _permission_checker(self, client_id, module):
         if module == 3:
@@ -177,11 +180,17 @@ class UserManager:
             
         return False
 
+    def get_users_client(self, user_id):
+        return self.client_users.get(user_id)
+
+    def get_clients_user(self, client_id):
+        return self.auth_status[client_id].uid
+
     def _query_handler(self, client_id, data):
         if 'command' not in data:
             return None
 
-        if data['command'] == 'sign-in':
+        elif data['command'] == 'sign-in':
             if self.auth_status.get(client_id):
                 return {'status': 'error', 'code': ' ALREADY_LOGGED_IN'}
             if data.get('username') is None:
@@ -194,6 +203,7 @@ class UserManager:
                 return {'status': 'error', 'code': 'NO_SUCH_USER'}
             if this_user.password == data['password']:
                 self.auth_status[client_id] = _UserAuthenticationData(this_user.name, this_user.id)
+                self.client_users[this_user.id] = client_id
                 return {'status': 'ok'}
             else:
                 return {'status': 'error', 'code': 'WRONG_PASSWORD'}
@@ -226,7 +236,7 @@ class UserManager:
         elif data['command'] == 'get-name':
             if 'id' not in data:
                 return {'status':'error', 'code': 'NO_ID'}
-            this_user = self.database_session.query(User).filter(id=data['id']).first()
+            this_user = self.database_session.query(User).filter(User.id == data['id']).first()
             if this_user:
                 return {'status': 'ok', 'name': this_user.name}
             else:
@@ -238,7 +248,7 @@ class UserManager:
 class WaitingRoomManager:
     def __init__(self, server):
         """
-        Creates user manager.
+        Creates waiting room manager.
         :param server:
         :return:
         """
@@ -255,7 +265,7 @@ class WaitingRoomManager:
         if 'command' not in data:
             return None
         
-        if data['command'] == 'start-listening':
+        elif data['command'] == 'start-listening':
             self.listeners.add(client_id)
             return {'status': 'ok'}
         
@@ -292,5 +302,64 @@ class WaitingRoomManager:
 
         elif data['command'] == 'get-waiting-room':
             return {'status': 'ok', 'waiting-dict': self.users}
+
+        return {'status': 'error', 'code': 'INVALID_COMMAND'}
+
+class GameData:
+    def __init__(self, number, player_1_client, player_2_client, gameboard, gamepawn):
+        self.player_1_client = player_1_client
+        self.player_2_client = player_2_client
+        self.game_board = gameboard
+        self.game_pawn = gamepawn
+        self.current_player = 1
+
+
+class GameManager:
+    def __init__(self, server, usermanager, db_session):
+        """
+        Creates game manager.
+        :param server:
+        :param usermanager:
+        :return:
+        """
+        def query_handler(client_id, data):
+            self._query_handler(client_id, data)
+
+        server.set_query_handler(5, query_handler)
+
+        self.server = server
+        self.usermanager = usermanager
+        self.random_one = None
+        self.game_data = dict()
+        self.counter = 0
+        self.db_session = db_session
+
+    def _start_game(self, game_number, player_1_client, player_2_client):
+        gameboards = self.db_session.query(GameBoard)
+        random_gameboard_raw = gameboards.offset(int(int(gameboards.count() * random.random()))).first()
+
+
+
+    def _query_handler(self, client_id, data):
+        if 'command' not in data:
+            return None
+        elif data['command'] == 'find-random-game':
+            if self.random_one is not None:
+                self.counter = self.counter + 1
+                self._start_game(self.counter, self.random_one, client_id)
+                self.server.notify(self.random_one, 14, {'notification': 'opponent-found', 'opponent-id': self.usermanager.get_clients_user(client_id),
+                                                         'game-nr': self.counter, 'player-number': 1})
+                return_value = {'status': 'ok', 'game-status': 'found', 'opponent-id': self.usermanager.get_users_client(self.random_one),
+                                'game-nr': self.counter, 'player-number': 2}
+                self.random_one = None
+                return return_value
+            else:
+                random_one = client_id
+                return {'status': 'ok', 'game-status':'waiting'}
+        elif data['command'] == 'abandon-game':
+            pass
+        elif data['command'] == 'finish-turn':
+            pass
+
 
         return {'status': 'error', 'code': 'INVALID_COMMAND'}
