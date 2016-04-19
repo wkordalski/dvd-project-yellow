@@ -31,7 +31,9 @@ class Window:
         self.view = MainMenuView(self)
 
     def set_view(self, view):
+        ret = self.view
         self.view = view
+        return ret
 
     def close(self):
         self.window.close()
