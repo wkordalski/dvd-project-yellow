@@ -363,7 +363,7 @@ class GameManager:
         newpawn = [[0 for i in range(len(pawn))] for j in range(len(pawn[0]))]
         for i in range(len(pawn)):
             for j in range(len(pawn[0])):
-                newpawn[j][len(pawn) ] = pawn[i][j]
+                newpawn[j][len(pawn) - i - 1 ] = pawn[i][j]
         return newpawn
 
 
