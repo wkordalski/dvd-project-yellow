@@ -306,10 +306,21 @@ class WaitingRoomManager:
         return {'status': 'error', 'code': 'INVALID_COMMAND'}
 
 class GameData:
-    def __init__(self, number, player_1_client, player_2_client, gameboard, gamepawn):
+    def __init__(self, number, player_1_client, player_2_client, gameboard, gameboard2, gamepawn):
+        """
+        Creates information about game.
+        :param number:
+        :param player_1_client:
+        :param player_2_client:
+        :param gameboard:
+        :param gameboard2:
+        :param gamepawn:
+        :return:
+        """
         self.player_1_client = player_1_client
         self.player_2_client = player_2_client
-        self.game_board = gameboard
+        self.game_board_point = gameboard
+        self.game_board_move = gameboard2
         self.game_pawn = gamepawn
         self.current_player = 1
 
@@ -334,10 +345,53 @@ class GameManager:
         self.counter = 0
         self.db_session = db_session
 
-    def _start_game(self, game_number, player_1_client, player_2_client):
+    def _check_move(self, y, x, board, pawn):
+        for i in range(len(pawn)):
+            for j in range(len(pawn[0])):
+                try:
+                    if pawn[y + i][x + j] == 1 and board [y][x] < 0:
+                        return False
+                except IndexError:
+                    return False
+        return True
+
+    def _swapped_pawn(self, pawn):
+        newpawn = reversed(pawn)
+        return newpawn
+
+    def _clockwised_pawn(self, pawn):
+        newpawn = [[0 for i in range(len(pawn))] for j in range(len(pawn[0]))]
+        for i in range(len(pawn)):
+            for j in range(len(pawn[0])):
+                newpawn[j][len(pawn) ] = pawn[i][j]
+        return newpawn
+
+
+    def _start_random_game(self, game_number, player_1_client, player_2_client):
         gameboards = self.db_session.query(GameBoard)
         random_gameboard_raw = gameboards.offset(int(int(gameboards.count() * random.random()))).first()
-
+        game_string = random_gameboard_raw.shapestring
+        board_table = [[0 for j in range(random_gameboard_raw.height)] for i in range(random_gameboard_raw.width)]
+        for i in range(random_gameboard_raw.width):
+            for j in range(random_gameboard_raw.height):
+                if game_string[j * random_gameboard_raw.height + i] == '1':
+                    board_table[i][j] = random.randint(1,9)
+        board_table2 = [[-3 for j in range(random_gameboard_raw.height)] for i in range(random_gameboard_raw.width)]
+        for i in range(random_gameboard_raw.width):
+            for j in range(random_gameboard_raw.height):
+                if game_string[j * random_gameboard_raw.height + i] == '1':
+                    board_table2[i][j] = 0
+        gamepawns = self.db_session.query(GamePawn)
+        random_gamepawn_raw = gamepawns.offset(int(int(gamepawns.count() * random.random()))).first()
+        pawn_string = random_gamepawn_raw.shapestring
+        pawn_table = [[0 for j in range(random_gamepawn_raw.height)] for i in range(random_gamepawn_raw.width)]
+        for i in range(random_gamepawn_raw.width):
+            for j in range(random_gamepawn_raw.height):
+                if pawn_string[j * random_gameboard_raw.height + i] == '1':
+                    pawn_table[i][j] = 1
+        #TODO: check if it's possible to cover field
+        self.game_data[game_number] = GameData(game_number, player_1_client,player_2_client, board_table, board_table2,
+                                               pawn_table)
 
 
     def _query_handler(self, client_id, data):
@@ -346,9 +400,11 @@ class GameManager:
         elif data['command'] == 'find-random-game':
             if self.random_one is not None:
                 self.counter = self.counter + 1
-                self._start_game(self.counter, self.random_one, client_id)
+                self._start_random_game(self.counter, self.random_one, client_id)
                 self.server.notify(self.random_one, 14, {'notification': 'opponent-found', 'opponent-id': self.usermanager.get_clients_user(client_id),
-                                                         'game-nr': self.counter, 'player-number': 1})
+                                                         'game-nr': self.counter, 'player-number': 1,
+                                                         'game_board': self.game_data[self.counter].game_board_point,
+                                                         'game-pawn': self.game_data[self.counter].game_pawn})
                 return_value = {'status': 'ok', 'game-status': 'found', 'opponent-id': self.usermanager.get_users_client(self.random_one),
                                 'game-nr': self.counter, 'player-number': 2}
                 self.random_one = None
