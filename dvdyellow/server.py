@@ -23,6 +23,7 @@ class ServerManager:
         self.server = Server(lambda x: x == 1)
         self.logger = logging.getLogger("ServerManager")
         self.dirs = AppDirs('dvdyellow', appauthor='yellow-team', multipath=True)
+        self.config = None
 
         self._setup_server_configuration(target_configuration, config_file, config_object)
         self._setup_database()
