@@ -1,6 +1,7 @@
 """
 Server manager and server modules will be implemented here.
 """
+import argparse
 import logging
 import os
 
@@ -294,3 +295,14 @@ class WaitingRoomManager:
             return {'status': 'ok', 'waiting-dict': self.users}
 
         return {'status': 'error', 'code': 'INVALID_COMMAND'}
+
+
+if __name__ == '__main__':
+    arg_parser = argparse.ArgumentParser(description="DVD Yellow Project server")
+    arg_parser.add_argument('--config', metavar='file', dest='config_file', type=str, default=None,
+                            help="Server configuration file")
+
+    args = arg_parser.parse_args()
+
+    server_manager = ServerManager(config_file=args.config_file)
+    server_manager.run()
