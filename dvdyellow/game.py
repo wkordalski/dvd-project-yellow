@@ -104,10 +104,15 @@ class Session:
 
         return AsyncQuery(lambda: r.check(), result_processor)
 
+    def get_online_users(self):
+        # TODO
+        pass
+
 
 class User:
     def __init__(self, session, user_id):
         self._uid = user_id
+        self._name = None
         self.session = session
 
     @property
@@ -116,7 +121,7 @@ class User:
 
     @property
     def name(self):
-        if self.name is None:
+        if self._name is None:
             data = {
                 'command': 'get-name',
                 'id': self._uid
@@ -125,12 +130,20 @@ class User:
 
             def result_processor():
                 if r.response['status'] == 'ok':
-                    self.name = r.response['name']
-                    return self.name
+                    self._name = r.response['name']
+                    return self._name
                 else:
                     assert False
 
             return AsyncQuery(lambda: r.check(), result_processor)
 
         else:
-            return AsyncQuery(lambda: True, lambda: self.name)
+            return AsyncQuery(lambda: True, lambda: self._name)
+
+    @property
+    def is_online(self):
+        pass
+
+    @property
+    def get_status(self):
+        pass
