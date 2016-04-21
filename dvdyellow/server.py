@@ -485,7 +485,7 @@ class GameManager:
                     elif self.game_data[data['game-nr']].game_board_move[i][j] == -1:
                         player_1_score += self.game_data[data['game-nr']].game_board_point[i][j]
                     elif self.game_data[data['game-nr']].game_board_move[i][j] == -2:
-                        player_2_score += self.game_data[data['game-nr']].game_board_poing[i][j]
+                        player_2_score += self.game_data[data['game-nr']].game_board_point[i][j]
             if is_it_end:
                 if player_1_score > player_2_score:
                     self.server.notify(self.game_data[data['game-nr']].player_client[2 - data['player-nr']], 15,
