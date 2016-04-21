@@ -13,8 +13,7 @@ from sqlalchemy.engine import create_engine
 from sqlalchemy.engine.url import URL
 from sqlalchemy.orm.session import sessionmaker
 
-from dvdyellow.orm import create_schemes
-from .orm import User, GameBoard, GamePawn
+from .orm import User, GameBoard, GamePawn, create_schemes
 from .network import Server
 
 
@@ -158,6 +157,7 @@ class UserManager:
         :param db_session:
         :return:
         """
+
         def permission_checker(client_id, module):
             return self._permission_checker(client_id, module)
 
@@ -166,7 +166,7 @@ class UserManager:
 
         server.set_permission_checker(permission_checker)
         server.set_query_handler(3, query_handler)
-        
+
         self.database_session = db_session
         self.auth_status = dict()
         self.client_users = dict()
@@ -177,7 +177,7 @@ class UserManager:
 
         if client_id in self.auth_status:
             return True
-            
+
         return False
 
     def get_users_client(self, user_id):
@@ -207,21 +207,21 @@ class UserManager:
                 return {'status': 'ok'}
             else:
                 return {'status': 'error', 'code': 'WRONG_PASSWORD'}
-            
+
         elif data['command'] == 'sign-out':
             if client_id in self.auth_status:
                 del self.auth_status[client_id]
                 return {'status': 'ok'}
             else:
                 return {'status': 'error', 'code': 'NOT_SIGNED_IN'}
-                
+
         elif data['command'] == 'get-status':
             if client_id in self.auth_status:
                 user_data = self.auth_status[client_id]
                 return {'status': 'ok', 'authenticated': True, 'username': user_data.username, 'id': user_data.uid}
             else:
                 return {'status': 'ok', 'authenticated': False}
-        
+
         elif data['command'] == 'sign-up':
             if 'username' not in data:
                 return {'status': 'error', 'code': 'NO_USERNAME'}
@@ -235,7 +235,7 @@ class UserManager:
 
         elif data['command'] == 'get-name':
             if 'id' not in data:
-                return {'status':'error', 'code': 'NO_ID'}
+                return {'status': 'error', 'code': 'NO_ID'}
             this_user = self.database_session.query(User).filter(User.id == data['id']).first()
             if this_user:
                 return {'status': 'ok', 'name': this_user.name}
@@ -252,36 +252,37 @@ class WaitingRoomManager:
         :param server:
         :return:
         """
+
         def query_handler(client_id, data):
             self._query_handler(client_id, data)
 
         server.set_query_handler(4, query_handler)
-        
+
         self.listeners = set()
         self.users = dict()
         self.server = server
-        
+
     def _query_handler(self, client_id, data):
         if 'command' not in data:
             return None
-        
+
         elif data['command'] == 'start-listening':
             self.listeners.add(client_id)
             return {'status': 'ok'}
-        
+
         elif data['command'] == 'stop-listening':
             if client_id not in self.listeners:
                 return {'status': 'error', 'code': 'CLIENT_NOT_LISTENING'}
             self.listeners.discard(client_id)
             return {'status': 'ok'}
-        
+
         elif data['command'] == 'get-status':
             if 'id' not in data:
                 return {'status': 'error', 'code': 'NO_USERID'}
             elif data['id'] not in self.users:
                 return {'status': 'ok', 'user-status': 'disconnected'}
             return {'status': 'ok', 'user-status': self.users[data['id']]}
-         
+
         elif data['command'] == 'set-status':
             if 'new-status' not in data:
                 return {'status': 'error', 'code': 'NO_NEW_STATUS'}
@@ -305,6 +306,7 @@ class WaitingRoomManager:
 
         return {'status': 'error', 'code': 'INVALID_COMMAND'}
 
+
 class GameData:
     def __init__(self, number, player_1_client, player_2_client, gameboard, gameboard2, gamepawn):
         """
@@ -317,8 +319,9 @@ class GameData:
         :param gamepawn:
         :return:
         """
-        self.player_1_client = player_1_client
-        self.player_2_client = player_2_client
+        self.player_client = [0 for i in range(2)]
+        self.player_client[0] = player_1_client
+        self.player_client[1] = player_2_client
         self.game_board_point = gameboard
         self.game_board_move = gameboard2
         self.game_pawn = gamepawn
@@ -333,6 +336,7 @@ class GameManager:
         :param usermanager:
         :return:
         """
+
         def query_handler(client_id, data):
             self._query_handler(client_id, data)
 
@@ -345,77 +349,180 @@ class GameManager:
         self.counter = 0
         self.db_session = db_session
 
-    def _check_move(self, y, x, board, pawn):
+    def _check_move(self, x, y, board, pawn):
         for i in range(len(pawn)):
             for j in range(len(pawn[0])):
                 try:
-                    if pawn[y + i][x + j] == 1 and board [y][x] < 0:
+                    if pawn[x + i][y + j] == 1 and board[x][y] != 0:
                         return False
                 except IndexError:
                     return False
         return True
 
-    def _swapped_pawn(self, pawn):
-        newpawn = reversed(pawn)
-        return newpawn
-
     def _clockwised_pawn(self, pawn):
         newpawn = [[0 for i in range(len(pawn))] for j in range(len(pawn[0]))]
         for i in range(len(pawn)):
             for j in range(len(pawn[0])):
-                newpawn[j][len(pawn) - i - 1 ] = pawn[i][j]
+                if pawn[i][j] == 1:
+                    newpawn[j][len(pawn) - i - 1] = 1
         return newpawn
 
+    def _print_move(self, pawn, x, y, newboard, nr):
+        for i in range(len(pawn)):
+            for j in range(len(pawn[0])):
+                if pawn[i][j] == 1:
+                    newboard[x + i][y + j] = nr
+
+    def _transform_after_move(self, pawn, moveboard, nr):
+        temppawn = pawn
+        newboard = [[1 for j in range(len(moveboard))] for i in range(len(moveboard[0]))]
+        for i in range(len(moveboard)):
+            for j in range(len(moveboard[0])):
+                if moveboard[i][j] != 0:
+                    newboard[i][j] = 0
+        for k in range(4):
+            temppawn = self._clockwised_pawn(temppawn)
+            for i in range(len(moveboard)):
+                for j in range(len(moveboard[0])):
+                    if self._check_move(i, j, moveboard, pawn):
+                        self._print_move(pawn, i, j, newboard, 0)
+        for i in range(len(moveboard)):
+            for j in range(len(moveboard[0])):
+                if newboard[i][j] == 1:
+                    moveboard[i][j] = nr
 
     def _start_random_game(self, game_number, player_1_client, player_2_client):
-        gameboards = self.db_session.query(GameBoard)
-        random_gameboard_raw = gameboards.offset(int(int(gameboards.count() * random.random()))).first()
-        game_string = random_gameboard_raw.shapestring
-        board_table = [[0 for j in range(random_gameboard_raw.height)] for i in range(random_gameboard_raw.width)]
-        for i in range(random_gameboard_raw.width):
-            for j in range(random_gameboard_raw.height):
-                if game_string[j * random_gameboard_raw.height + i] == '1':
-                    board_table[i][j] = random.randint(1,9)
-        board_table2 = [[-3 for j in range(random_gameboard_raw.height)] for i in range(random_gameboard_raw.width)]
-        for i in range(random_gameboard_raw.width):
-            for j in range(random_gameboard_raw.height):
-                if game_string[j * random_gameboard_raw.height + i] == '1':
-                    board_table2[i][j] = 0
         gamepawns = self.db_session.query(GamePawn)
         random_gamepawn_raw = gamepawns.offset(int(int(gamepawns.count() * random.random()))).first()
         pawn_string = random_gamepawn_raw.shapestring
         pawn_table = [[0 for j in range(random_gamepawn_raw.height)] for i in range(random_gamepawn_raw.width)]
         for i in range(random_gamepawn_raw.width):
             for j in range(random_gamepawn_raw.height):
-                if pawn_string[j * random_gameboard_raw.height + i] == '1':
+                if pawn_string[j * random_gamepawn_raw.height + i] == '1':
                     pawn_table[i][j] = 1
-        #TODO: check if it's possible to cover field
-        self.game_data[game_number] = GameData(game_number, player_1_client,player_2_client, board_table, board_table2,
-                                               pawn_table)
+        gameboards = self.db_session.query(GameBoard)
+        random_gameboard_raw = gameboards.offset(int(int(gameboards.count() * random.random()))).first()
+        game_string = random_gameboard_raw.shapestring
+        board_table2 = [[-3 for j in range(random_gameboard_raw.height)] for i in range(random_gameboard_raw.width)]
+        for i in range(random_gameboard_raw.width):
+            for j in range(random_gameboard_raw.height):
+                if game_string[j * random_gameboard_raw.height + i] == '1':
+                    board_table2[i][j] = 0
+        self._transform_after_move(pawn_table, board_table2, -3)
+        board_table = [[0 for j in range(random_gameboard_raw.height)] for i in range(random_gameboard_raw.width)]
+        for i in range(random_gameboard_raw.width):
+            for j in range(random_gameboard_raw.height):
+                if board_table2[i][j] == '0':
+                    board_table[i][j] = random.randint(1, 9)
 
+        self.game_data[game_number] = GameData(game_number, player_1_client, player_2_client, board_table, board_table2,
+                                               pawn_table)
 
     def _query_handler(self, client_id, data):
         if 'command' not in data:
             return None
         elif data['command'] == 'find-random-game':
             if self.random_one is not None:
-                self.counter = self.counter + 1
+                self.counter += 1
                 self._start_random_game(self.counter, self.random_one, client_id)
-                self.server.notify(self.random_one, 14, {'notification': 'opponent-found', 'opponent-id': self.usermanager.get_clients_user(client_id),
+                self.server.notify(self.random_one, 14, {'notification': 'opponent-found',
+                                                         'opponent-id': self.usermanager.get_clients_user(client_id),
                                                          'game-nr': self.counter, 'player-number': 1,
                                                          'game_board': self.game_data[self.counter].game_board_point,
                                                          'game-pawn': self.game_data[self.counter].game_pawn})
-                return_value = {'status': 'ok', 'game-status': 'found', 'opponent-id': self.usermanager.get_users_client(self.random_one),
+                return_value = {'status': 'ok', 'game-status': 'found',
+                                'opponent-id': self.usermanager.get_users_client(self.random_one),
                                 'game-nr': self.counter, 'player-number': 2}
                 self.random_one = None
                 return return_value
             else:
                 random_one = client_id
-                return {'status': 'ok', 'game-status':'waiting'}
+                return {'status': 'ok', 'game-status': 'waiting'}
         elif data['command'] == 'abandon-game':
-            pass
-        elif data['command'] == 'finish-turn':
-            pass
+            if 'game-nr' not in data:
+                return {'status': 'error', 'code': 'NO_GAME_NR'}
+            elif data['game-nr'] not in self.game_data:
+                return {'status': 'error', 'code': 'BAD_GAME_NR'}
+            elif 'player-nr' not in data:
+                return {'status': 'error', 'code': 'NO_PLAYER'}
+            elif self.game_data[data['game-nr']].player_client[data['player-nr']] != client_id:
+                return {'status': 'error', 'code': 'BAD_GAME_PLAYER_NR'}
+            self.server.notify(self.game_data[data['game-nr']].player_client[2 - data['player-nr']], 15,
+                               {'notification': 'game-finished', 'result': 'won', 'detail': 'enemy-agandoned-game',
+                                'game-nr': data['game_nr']})
+            del self.game_data[data['game_nr']]
+            return {'status': 'ok', 'game-result': 'defeated', 'detail': 'game-abandoned'}
+        elif data['command'] == 'move':
+            if 'game-nr' not in data:
+                return {'status': 'error', 'code': 'NO_GAME_NR'}
+            elif data['game-nr'] not in self.game_data:
+                return {'status': 'error', 'code': 'BAD_GAME_NR'}
+            elif 'player-nr' not in data:
+                return {'status': 'error', 'code': 'NO_PLAYER'}
+            elif self.game_data[data['game-nr']].player_client[data['player-nr']] != client_id:
+                return {'status': 'error', 'code': 'BAD_GAME_PLAYER_NR'}
+            elif data['player-nr'] != self.game_data['game-nr'].current_player:
+                return {'status': 'error', 'code': 'WRONG_TURN'}
+            elif 'x' not in data or 'y' not in data or 'rotation' not in data:
+                return {'status': 'error', 'code': 'NO_MOVE'}
+            temp_pawn = self.game_data[data['game-nr']].game_pawn
+            for i in range(data['rotation']):
+                temp_pawn = self._clockwised_pawn(temp_pawn)
+            if self._check_move(data['x'], data['y'], self.game_data[data['game-nr']].game_board_move, temp_pawn):
+                return {'status': 'error', 'code': 'WRONG_MOVE'}
+            self._print_move(temp_pawn, data['x'], data['y'], self.game_data[data['game-nr']].moveboard,
+                             data['player-nr'])
+            self._transform_after_move(temp_pawn, self.game_data[data['game-nr']], -data['player-nr'])
+            player_1_score = 0
+            player_2_score = 0
+            is_it_end = True
+            for i in range(len(self.game_data[data['game-nr']].game_board_move)):
+                for j in range(len(self.game_data[data['game-nr']].game_board_move[0])):
+                    if self.game_data[data['game-nr']].game_board_move[i][j] == 0:
+                        is_it_end = False
+                    elif self.game_data[data['game-nr']].game_board_move[i][j] == -1:
+                        player_1_score += self.game_data[data['game-nr']].game_board_point[i][j]
+                    elif self.game_data[data['game-nr']].game_board_move[i][j] == -2:
+                        player_2_score += self.game_data[data['game-nr']].game_board_poing[i][j]
+            if is_it_end:
+                if player_1_score > player_2_score:
+                    self.server.notify(self.game_data[data['game-nr']].player_client[2 - data['player-nr']], 15,
+                                       {'notification': 'game-finished', 'winner': 1, 'detail': 'no-more-moves',
+                                        'game-nr': data['game_nr'], 'game_move_board': self.game_data[data['game-nr']].game_board_move,
+                                        'player_1_points': player_1_score, 'player_2_points': player_2_score})
 
+                    to_return = {'status': 'ok', 'game-status': 'finished', 'winner': 1, 'detail': 'no-more-moves',
+                            'game-nr': data['game_nr'],
+                            'game_move_board': self.game_data[data['game-nr']].game_board_move,
+                            'player_1_points': player_1_score, 'player_2_points': player_2_score}
+                    del self.game_data[data['game_nr']]
+                    return to_return
+                elif player_2_score > player_1_score:
+                    self.server.notify(self.game_data[data['game-nr']].player_client[2 - data['player-nr']], 15,
+                                       {'notification': 'game-finished', 'winner': 2, 'detail': 'no-more-moves',
+                                        'game-nr': data['game_nr'],
+                                        'game_move_board': self.game_data[data['game-nr']].game_board_move,
+                                        'player_1_points': player_1_score, 'player_2_points': player_2_score})
+                    to_return = {'status': 'ok', 'game-status': 'finished', 'winner': 2, 'detail': 'no-more-moves',
+                            'game-nr': data['game_nr'], 'game_move_board': self.game_data[data['game-nr']].game_board_move,
+                            'player_1_points': player_1_score, 'player_2_points': player_2_score}
+                    del self.game_data[data['game_nr']]
+                    return to_return
+                else:
+                    self.server.notify(self.game_data[data['game-nr']].player_client[2 - data['player-nr']], 15,
+                                       {'notification': 'game-finished', 'winner': 0, 'detail': 'no-more-moves',
+                                        'game-nr': data['game_nr']})
+                    to_return = {'status': 'ok', 'game-status': 'finished', 'winner': 0, 'detail': 'no-more-moves',
+                            'game-nr': data['game_nr'], 'game_move_board': self.game_data[data['game-nr']].game_board_move,
+                                                         'player_1_points': player_1_score, 'player_2_points': player_2_score}
+                    del self.game_data[data['game_nr']]
+                    return to_return
+            self.server.notify(self.game_data[data['game-nr']].player_client[2 - data['player-nr']], 15,
+                               {'notification': 'your-new-turn',
+                                'game-nr': data['game-nr'],
+                                'game_move_board': self.game_data[data['game-nr']].game_board_move,
+                                'player_1_points': player_1_score, 'player_2_points': player_2_score})
+            return {'status': 'ok', 'game-status': 'opponents-turn', 'game_move_board': self.game_data[data['game-nr']].game_board_move,
+                    'player_1_points': player_1_score, 'player_2_points': player_2_score}
 
         return {'status': 'error', 'code': 'INVALID_COMMAND'}
