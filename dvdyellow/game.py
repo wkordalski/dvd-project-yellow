@@ -169,15 +169,28 @@ class Session:
             'command': 'start-listening'
         }
 
+        data_get = {
+            'command': 'get-waiting-room'
+        }
+
         wr = WaitingRoom(self)
 
         def notifications_handler(channel, data):
             wr.on_change_status(channel, data)
         self.client.set_notification_handler(13, notifications_handler)
 
+        def wr_setter(r):
+            if check_result_ok(r):
+                wr.status = r.response['waiting-dict']
+                self.waiting_room = wr
+                return wr
+            else:
+                return None
+
         return AsyncQueryChain([
             (AsyncQuery(lambda: self.client.query(4, data_sign_in), lambda r: r.check(), check_result_ok), lambda r: r),
             (AsyncQuery(lambda: self.client.query(4, data_listen), lambda r: r.check(), check_result_ok), lambda r: r),
+            (AsyncQuery(lambda: self.client.query(4, data_get), lambda r: r.check(), wr_setter), lambda r: r),
         ]).run()
 
 
@@ -198,6 +211,7 @@ class User:
                 'command': 'get-name',
                 'id': self._uid
             }
+
             def result_processor(r):
                 if r.response['status'] == 'ok':
                     self._name = r.response['name']
@@ -210,38 +224,42 @@ class User:
         else:
             return AsyncQuery(lambda: None, lambda _: True, lambda _: self._name).run()
 
+    @property
+    def status(self):
+        return self.session.waiting_room.get_status_by_user(self)
+
 
 class WaitingRoom:
     def __init__(self, session):
         self.session = session
-        self.users = None     # contains active users
         self.status = dict()  # contains users' statuses
         self.status_changed = None
 
     def on_change_status(self, channel, data):
         # here should be updating internal tables and calling self.status_changed
-        # TODO...
+        if data['notification'] == 'status-change':
+            uid = data.get('user')
+            status = data.get('status')
+            old_status = self.status[uid] if uid in self.status[uid] else 'disconnected'
+
+            if status == 'disconnected':
+                del self.status[uid]
+            else:
+                self.status[uid] = status
 
         if self.status_changed:
-            # self.status_changed(user, old_status, new_status)
-            pass
-        pass
+            self.status_changed(self.session._make_user(uid), old_status, status)
 
     def get_online_users(self):
         # returns list of User
-        if self.users is None:
-            # download users
-            pass
-        else:
-            return AsyncQuery(lambda: None, lambda _: True,
-                              lambda _: [self.session._make_user(uid) for uid in self.users.keys()]).run()
+        return AsyncQuery(lambda: None, lambda _: True,
+                          lambda _: [self.session._make_user(uid) for uid in self.status.keys()]).run()
 
     def get_status_by_user(self, user):
         if user.id in self.status:
-            return AsyncQuery(lambda: None, lambda _: True, lambda _: self.status[user.id])
+            return AsyncQuery(lambda: None, lambda _: True, lambda _: self.status[user.id]).run()
         else:
-            # call server
-            pass
+            return AsyncQuery(lambda: None, lambda _: True, lambda _: 'disconnected').run()
 
     def set_status(self):
         # send query to change status

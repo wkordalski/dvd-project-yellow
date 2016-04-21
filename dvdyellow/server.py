@@ -134,8 +134,14 @@ class ServerManager:
         """
         if self.on_run:
             self.on_run()
-        self.server.listen('0.0.0.0', self.port)
 
+        try:
+            self.logger.info("Starting listening...")
+            self.server.listen('0.0.0.0', self.port)
+        except KeyboardInterrupt:
+            self.server.close()
+
+        self.logger.info("Finalizing server,,,")
         self._finalize()
 
     def stop(self):
