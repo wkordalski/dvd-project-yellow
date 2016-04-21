@@ -1,4 +1,5 @@
 import threading
+from random import Random, randint
 from threading import Thread
 from time import sleep
 from unittest.case import TestCase
@@ -9,17 +10,13 @@ from dvdyellow.server import ServerManager
 
 
 class AuthenticationTests(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.port = 42777
-
     def setUp(self):
-        AuthenticationTests.port += 1
+        self.port = randint(10000, 65000)
         self.server_manager = None
         self.server_started = False
 
         def server_thread(test_case):
-            test_case.server_manager = ServerManager(config_object={'network':{'port': AuthenticationTests.port}})
+            test_case.server_manager = ServerManager(config_object={'network':{'port': self.port}})
 
             def on_run():
                 test_case.server_started = True
@@ -46,8 +43,17 @@ class AuthenticationTests(TestCase):
         """
         Tries to sign in to an existing account.
         """
-        session = make_session('localhost', AuthenticationTests.port).result
+        session = make_session('localhost', self.port).result
         session.sign_in('john', 'best123')
+        self.assertIsNotNone(session.get_signed_in_user().result, "User haven't logged in.")
+        session.sign_out()
+
+    def test_sign_in_empty_password(self):
+        """
+        Tries to sign in to an existing account.
+        """
+        session = make_session('localhost', self.port).result
+        session.sign_in('lazy', '')
         self.assertIsNotNone(session.get_signed_in_user().result, "User haven't logged in.")
         session.sign_out()
 
@@ -55,7 +61,7 @@ class AuthenticationTests(TestCase):
         """
         Tries to sign in to a not existing account.
         """
-        session = make_session('localhost', AuthenticationTests.port).result
+        session = make_session('localhost', self.port).result
         session.sign_in('johnny', 'best123')
         self.assertIsNone(session.get_signed_in_user().result, "User have logged in.")
 
@@ -63,7 +69,7 @@ class AuthenticationTests(TestCase):
         """
         Tries to sign in with correct username and wrong password.
         """
-        session = make_session('localhost', AuthenticationTests.port).result
+        session = make_session('localhost', self.port).result
         session.sign_in('john', 'wrong_password')
         self.assertIsNone(session.get_signed_in_user().result, "User have logged in.")
 
@@ -71,7 +77,7 @@ class AuthenticationTests(TestCase):
         """
         Tries to sign up with correct username.
         """
-        session = make_session('localhost', AuthenticationTests.port).result
+        session = make_session('localhost', self.port).result
         self.assertTrue(session.sign_up('me', 'good_password').result, "Signing up failed")
         session.sign_in('me', 'good_password')
         self.assertIsNotNone(session.get_signed_in_user().result, "User haven't logged in.")
@@ -81,24 +87,23 @@ class AuthenticationTests(TestCase):
         """
         Tries to sign up with used username.
         """
-        session = make_session('localhost', AuthenticationTests.port).result
+        session = make_session('localhost', self.port).result
         self.assertFalse(session.sign_up('john', 'good_password').result, "Signing up succeeded")
 
     def test_sign_up_empty_password(self):
         """
         Tries to sign up with empty password (should pass)
         """
-        session = make_session('localhost', AuthenticationTests.port).result
+        session = make_session('localhost', self.port).result
         self.assertTrue(session.sign_up('me', '').result, "Signing up failed")
         session.sign_in('me', '')
         self.assertIsNotNone(session.get_signed_in_user().result, "User haven't logged in.")
         session.sign_out()
 
-
     def test_sign_up_empty_username(self):
         """
         Tries to sign up with empty username (should not pass)
         """
-        session = make_session('localhost', AuthenticationTests.port).result
+        session = make_session('localhost', self.port).result
         self.assertFalse(session.sign_up('', 'good_password').result, "Signing up succeeded.")
 
