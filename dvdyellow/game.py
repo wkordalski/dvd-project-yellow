@@ -31,10 +31,22 @@ def make_session(address, port=42371):
     return AsyncQuery(lambda: r.is_connected, lambda: Session(client))
 
 
+def check_result_ok(query):
+    if 'status' in query.result and query.result['status'] == 'ok':
+        return True
+    else:
+        return False
+
+
+def chain_queries(*args):
+    # TODO
+    pass
+
 class Session:
     def __init__(self, client):
         self.client = client
         self.known_users = dict()
+        self.waiting_room = None
 
     def _make_user(self, uid):
         if uid not in self.known_users:
@@ -50,29 +62,17 @@ class Session:
             'username': login,
             'password': password
         }
+
         r = self.client.query(3, data)
-
-        def result_processor():
-            if r.response['status'] == 'ok':
-                return True
-            else:
-                return False
-
-        return AsyncQuery(lambda: r.check(), result_processor)
+        return AsyncQuery(lambda: r.check(), lambda: check_result_ok(r))
 
     def sign_out(self):
         data = {
             'command': 'sign-out'
         }
+
         r = self.client.query(3, data)
-
-        def result_processor():
-            if r.response['status'] == 'ok':
-                return True
-            else:
-                return False
-
-        return AsyncQuery(lambda: r.check(), result_processor)
+        return AsyncQuery(lambda: r.check(), lambda: check_result_ok(r))
 
     def sign_up(self, login, password):
         data = {
@@ -80,15 +80,9 @@ class Session:
             'username': login,
             'password': password
         }
+
         r = self.client.query(3, data)
-
-        def result_processor():
-            if r.response['status'] == 'ok':
-                return True
-            else:
-                return False
-
-        return AsyncQuery(lambda: r.check(), result_processor)
+        return AsyncQuery(lambda: r.check(), lambda: check_result_ok(r))
 
     def get_signed_in_user(self):
         data = {
@@ -104,9 +98,27 @@ class Session:
 
         return AsyncQuery(lambda: r.check(), result_processor)
 
-    def get_online_users(self):
-        # TODO
-        pass
+    def get_waiting_room(self):
+        data_sign_in = {
+            'command': 'set-status',
+            'new-status': 'connected'
+        }
+
+        data_listen = {
+            'command': 'start-listening'
+        }
+
+        wr = WaitingRoom(self)
+
+        def notifications_handler(channel, data):
+            wr.on_change_status(channel, data)
+        self.client.set_notification_handler(13, notifications_handler)
+
+        r = self.client.query(4, data_sign_in)
+        s = self.client.query(4, data_listen)
+
+        return AsyncQuery(lambda: r.check and s.check,
+                          lambda: wr if check_result_ok(r) and check_result_ok(s) else None)
 
 
 class User:
@@ -140,10 +152,39 @@ class User:
         else:
             return AsyncQuery(lambda: True, lambda: self._name)
 
-    @property
-    def is_online(self):
+
+class WaitingRoom:
+    def __init__(self, session):
+        self.session = session
+        self.users = None     # contains active users
+        self.status = dict()  # contains users' statuses
+        self.status_changed = None
+
+    def on_change_status(self, channel, data):
+        # here should be updating internal tables and calling self.status_changed
+        # TODO...
+
+        if self.status_changed:
+            # self.status_changed(user, old_status, new_status)
+            pass
         pass
 
-    @property
-    def get_status(self):
+    def get_online_users(self):
+        # returns list of User
+        if self.users is None:
+            # download users
+            pass
+        else:
+            return AsyncQuery(lambda: True, lambda: [self.session._make_user(uid) for uid in self.users.keys()])
+
+    def get_status_by_user(self, user):
+        if user.id in self.status:
+            return AsyncQuery(lambda: True, lambda: self.status[user.id])
+        else:
+            # call server
+            pass
+
+    def set_status(self):
+        # send query to change status
+        # returns AsyncQuery with True/False if it succeeded.
         pass

@@ -248,7 +248,7 @@ class UserManager:
 
 
 class WaitingRoomManager:
-    def __init__(self, server):
+    def __init__(self, server_manager : ServerManager):
         """
         Creates waiting room manager.
         :param server:
@@ -257,11 +257,14 @@ class WaitingRoomManager:
         def query_handler(client_id, data):
             self._query_handler(client_id, data)
 
+        server = server_manager.server
+
         server.set_query_handler(4, query_handler)
         
         self.listeners = set()
         self.users = dict()
         self.server = server
+        self.user_manager = server_manager.user_manager
         
     def _query_handler(self, client_id, data):
         if 'command' not in data:
@@ -287,19 +290,16 @@ class WaitingRoomManager:
         elif data['command'] == 'set-status':
             if 'new-status' not in data:
                 return {'status': 'error', 'code': 'NO_NEW_STATUS'}
-            if 'name' not in data:
-                return {'status': 'error', 'code': 'NO_USERNAME'}
-            if 'id' not in data:
-                return {'status': 'error', 'code': 'NO_USER_ID'}
+            user_id = self.user_manager.get_clients_user(client_id)
             if data['new-status'] == 'disconnected' and client_id in self.listeners:
                 self.listeners.discard(client_id)
             for i in self.listeners:
-                self.server.notify(i, 13, {'notification': 'status-change', 'user': data['name'],
-                                           'id': data['id'], 'status': data['new-status']})
+                self.server.notify(i, 13, {'notification': 'status-change', 'user': user_id,
+                                           'status': data['new-status']})
             if data['new-status'] == 'disconnected':
-                del self.users[data['id']]
+                del self.users[user_id]
             else:
-                self.users[data['id']] = data['new-status']
+                self.users[user_id] = data['new-status']
             return {'status': 'ok'}
 
         elif data['command'] == 'get-waiting-room':
@@ -423,7 +423,7 @@ class GameManager:
         return {'status': 'error', 'code': 'INVALID_COMMAND'}
 
 
-if __name__ == '__main__':
+def main():
     arg_parser = argparse.ArgumentParser(description="DVD Yellow Project server")
     arg_parser.add_argument('--config', metavar='file', dest='config_file', type=str, default=None,
                             help="Server configuration file")
@@ -432,3 +432,7 @@ if __name__ == '__main__':
 
     server_manager = ServerManager(config_file=args.config_file)
     server_manager.run()
+
+
+if __name__ == '__main__':
+    main()
