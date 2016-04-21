@@ -10,37 +10,103 @@ from .network import Client
 
 
 class AsyncQuery:
-    def __init__(self, checker, result_getter):
+    def __init__(self, function, checker, result_getter):
+        self.function = function
         self.checker = checker
         self.result_getter = result_getter
+        self.object = None
+        self.started = False
+
+    def run(self, *args, **kwargs):
+        old_started, self.started = self.started, True
+        if old_started:
+            raise AssertionError("Runned running query")
+
+        self.object = self.function(*args, **kwargs)
+
+        return self
 
     @property
     def ready(self):
-        return self.checker()
+        return self.checker(self.object)
 
     @property
     def result(self):
-        while not self.checker():
+        while not self.checker(self.object):
             sleep(milliseconds(1))
-        return self.result_getter()
+        return self.result_getter(self.object)
+
+
+class AsyncQueryChain:
+    def __init__(self, query, *args):
+        self.queries = args
+        self.queries.insert(0, query)
+        self.current = 0
+        self.started = False
+        self._result = None
+        self._all_results = []
+        self.error_reason = None
+        self.error_result = None
+
+    def run(self):
+        old_started, self.started = self.started, True
+        if old_started:
+            raise AssertionError("Runned running query")
+
+        self.queries[0][0].run(results=self._all_results)
+
+        return self
+
+    @property
+    def ready(self):
+        if self.current >= len(self.queries):
+            return True
+
+        while True:
+            # check if current is done
+            if self.queries[self.current][0].ready:
+                # get result, verify and run next
+                result = self.queries[self.current][0].result
+                self._all_results.append(result)
+                if self.queries[self.current][1] and not self.queries[self.current][1](self._all_results):
+                    self._result = self.error_result
+                    self.current = len(self.queries)
+                    return True
+                else:
+                    self.current += 1
+                    if self.current >= len(self.queries):
+                        self._result = result
+                        return True
+                    else:
+                        self.queries[self.current][0].run(results=self._all_results)
+                        continue
+            else:
+                return False
+
+    @property
+    def result(self):
+        while not self.checker(self.object):
+            sleep(milliseconds(1))
+        return self._result
+    
+    @property
+    def all_results(self):
+        while not self.checker(self.object):
+            sleep(milliseconds(1))
+        return self._all_results
 
 
 def make_session(address, port=42371):
     client = Client(1)
-    r = client.connect(address, port)
-    return AsyncQuery(lambda: r.is_connected, lambda: Session(client))
+    return AsyncQuery(lambda: client.connect(address, port), lambda r: r.is_connected, lambda _: Session(client)).run()
 
 
 def check_result_ok(query):
-    if 'status' in query.result and query.result['status'] == 'ok':
+    if query.response.get('status') == 'ok':
         return True
     else:
         return False
 
-
-def chain_queries(*args):
-    # TODO
-    pass
 
 class Session:
     def __init__(self, client):
@@ -62,17 +128,13 @@ class Session:
             'username': login,
             'password': password
         }
-
-        r = self.client.query(3, data)
-        return AsyncQuery(lambda: r.check(), lambda: check_result_ok(r))
+        return AsyncQuery(lambda: self.client.query(3, data), lambda r: r.check(), lambda r: check_result_ok(r)).run()
 
     def sign_out(self):
         data = {
             'command': 'sign-out'
         }
-
-        r = self.client.query(3, data)
-        return AsyncQuery(lambda: r.check(), lambda: check_result_ok(r))
+        return AsyncQuery(lambda: self.client.query(3, data), lambda r: r.check(), lambda r: check_result_ok(r)).run()
 
     def sign_up(self, login, password):
         data = {
@@ -80,25 +142,24 @@ class Session:
             'username': login,
             'password': password
         }
-
-        r = self.client.query(3, data)
-        return AsyncQuery(lambda: r.check(), lambda: check_result_ok(r))
+        return AsyncQuery(lambda: self.client.query(3, data), lambda r: r.check(), lambda r: check_result_ok(r)).run()
 
     def get_signed_in_user(self):
         data = {
             'command': 'get-status'
         }
-        r = self.client.query(3, data)
 
-        def result_processor():
+        def result_processor(r):
             if r.response['status'] == 'ok' and r.response['authenticated']:
                 return self._make_user(r.response['id'])
             else:
                 return None
 
-        return AsyncQuery(lambda: r.check(), result_processor)
+        return AsyncQuery(lambda: self.client.query(3, data), lambda r: r.check(), result_processor).run()
 
     def get_waiting_room(self):
+        if self.waiting_room: return self.waiting_room
+
         data_sign_in = {
             'command': 'set-status',
             'new-status': 'connected'
@@ -114,11 +175,10 @@ class Session:
             wr.on_change_status(channel, data)
         self.client.set_notification_handler(13, notifications_handler)
 
-        r = self.client.query(4, data_sign_in)
-        s = self.client.query(4, data_listen)
-
-        return AsyncQuery(lambda: r.check and s.check,
-                          lambda: wr if check_result_ok(r) and check_result_ok(s) else None)
+        return AsyncQueryChain([
+            (AsyncQuery(lambda: self.client.query(4, data_sign_in), lambda r: r.check(), check_result_ok), lambda r: r),
+            (AsyncQuery(lambda: self.client.query(4, data_listen), lambda r: r.check(), check_result_ok), lambda r: r),
+        ]).run()
 
 
 class User:
@@ -138,19 +198,17 @@ class User:
                 'command': 'get-name',
                 'id': self._uid
             }
-            r = self.session.client.query(3, data)
-
-            def result_processor():
+            def result_processor(r):
                 if r.response['status'] == 'ok':
                     self._name = r.response['name']
                     return self._name
                 else:
                     assert False
 
-            return AsyncQuery(lambda: r.check(), result_processor)
+            return AsyncQuery(lambda: self.session.client.query(3, data), lambda r: r.check(), result_processor).run()
 
         else:
-            return AsyncQuery(lambda: True, lambda: self._name)
+            return AsyncQuery(lambda: None, lambda _: True, lambda _: self._name).run()
 
 
 class WaitingRoom:
@@ -175,11 +233,12 @@ class WaitingRoom:
             # download users
             pass
         else:
-            return AsyncQuery(lambda: True, lambda: [self.session._make_user(uid) for uid in self.users.keys()])
+            return AsyncQuery(lambda: None, lambda _: True,
+                              lambda _: [self.session._make_user(uid) for uid in self.users.keys()]).run()
 
     def get_status_by_user(self, user):
         if user.id in self.status:
-            return AsyncQuery(lambda: True, lambda: self.status[user.id])
+            return AsyncQuery(lambda: None, lambda _: True, lambda _: self.status[user.id])
         else:
             # call server
             pass

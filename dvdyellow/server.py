@@ -29,7 +29,7 @@ class ServerManager:
         self._setup_database()
 
         self.user_manager = UserManager(self.server, self.db_session)
-        self.waiting_room = WaitingRoomManager(self.server)
+        self.waiting_room = WaitingRoomManager(self)
         self.game_manager = GameManager(self.server, self.user_manager, self.db_session)
 
         self.on_run = None

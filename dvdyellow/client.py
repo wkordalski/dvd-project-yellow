@@ -33,16 +33,16 @@ def txt(x, y, color=sf.Color.BLACK, size=25, fo=font2, tek=""):
 
 
 def logowanie(session, lo, pa):
-    session.sign_in(lo, pa)
+    session.sign_in(lo, pa).result
     return session.get_signed_in_user().result
 
 
 def rejestracja(session, lo, pa):
-    return session.sign_up(lo, pa)
+    return session.sign_up(lo, pa).result
 
 
 def wylogowywanie(session):
-    session.sign_out()
+    session.sign_out().result
 
 
 def zalogowani():
@@ -124,6 +124,9 @@ def main():
 
 
     while window.is_open:
+        # SIEĆ
+        session.process_events()
+
         for event in window.events:
             if event == sf.CloseEvent:
                 window.close()
