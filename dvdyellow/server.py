@@ -1,6 +1,7 @@
 """
 Server manager and server modules will be implemented here.
 """
+import argparse
 import logging
 import os
 
@@ -22,6 +23,7 @@ class ServerManager:
         self.server = Server(lambda x: x == 1)
         self.logger = logging.getLogger("ServerManager")
         self.dirs = AppDirs('dvdyellow', appauthor='yellow-team', multipath=True)
+        self.config = None
 
         self._setup_server_configuration(target_configuration, config_file, config_object)
         self._setup_database()
@@ -526,3 +528,16 @@ class GameManager:
                     'player_1_points': player_1_score, 'player_2_points': player_2_score}
 
         return {'status': 'error', 'code': 'INVALID_COMMAND'}
+
+
+
+if __name__ == '__main__':
+    arg_parser = argparse.ArgumentParser(description="DVD Yellow Project server")
+    arg_parser.add_argument('--config', metavar='file', dest='config_file', type=str, default=None,
+                            help="Server configuration file")
+
+    args = arg_parser.parse_args()
+
+    server_manager = ServerManager(config_file=args.config_file)
+    server_manager.run()
+

@@ -48,6 +48,15 @@ class AuthenticationTests(TestCase):
         self.assertIsNotNone(session.get_signed_in_user().result, "User haven't logged in.")
         session.sign_out()
 
+    def test_sign_in_empty_password(self):
+        """
+        Tries to sign in to an existing account.
+        """
+        session = make_session('localhost', self.port).result
+        session.sign_in('lazy', '')
+        self.assertIsNotNone(session.get_signed_in_user().result, "User haven't logged in.")
+        session.sign_out()
+
     def test_sign_in_wrong_username(self):
         """
         Tries to sign in to a not existing account.
