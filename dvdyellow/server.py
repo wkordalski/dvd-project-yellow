@@ -442,7 +442,9 @@ class GameManager:
                                                          'game-pawn': self.game_data[self.counter].game_pawn})
                 return_value = {'status': 'ok', 'game-status': 'found',
                                 'opponent-id': self.usermanager.get_users_client(self.random_one),
-                                'game-nr': self.counter, 'player-number': 2}
+                                'game-nr': self.counter, 'player-number': 2,
+                                'game_board': self.game_data[self.counter].game_board_point,
+                                'game-pawn': self.game_data[self.counter].game_pawn}
                 self.random_one = None
                 return return_value
             else:
@@ -471,7 +473,7 @@ class GameManager:
                 return {'status': 'error', 'code': 'NO_PLAYER'}
             elif self.game_data[data['game-nr']].player_client[data['player-nr']] != client_id:
                 return {'status': 'error', 'code': 'BAD_GAME_PLAYER_NR'}
-            elif data['player-nr'] != self.game_data['game-nr'].current_player:
+            elif data['player-nr'] != self.game_data[data['game-nr']].current_player:
                 return {'status': 'error', 'code': 'WRONG_TURN'}
             elif 'x' not in data or 'y' not in data or 'rotation' not in data:
                 return {'status': 'error', 'code': 'NO_MOVE'}
@@ -480,6 +482,7 @@ class GameManager:
                 temp_pawn = self._clockwised_pawn(temp_pawn)
             if self._check_move(data['x'], data['y'], self.game_data[data['game-nr']].game_board_move, temp_pawn):
                 return {'status': 'error', 'code': 'WRONG_MOVE'}
+            self.game_data[data['game-nr']].current_player = 3 - data['player-nr']
             self._print_move(temp_pawn, data['x'], data['y'], self.game_data[data['game-nr']].moveboard,
                              data['player-nr'])
             self._transform_after_move(temp_pawn, self.game_data[data['game-nr']], -data['player-nr'])
