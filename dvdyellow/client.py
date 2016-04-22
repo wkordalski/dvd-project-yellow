@@ -49,6 +49,10 @@ def zalogowani(session):
     return [u.name.result for u in session.get_waiting_room().result.get_online_users().result]
 
 
+def wyjscie_z_menu(session):
+    session.del_waiting_room().result
+
+
 def main():
     
     w, h = sf.Vector2(800, 600)
@@ -218,6 +222,7 @@ def main():
                     elif 20 <= x <= 270 and 440 <= y <= 500:
                         option = 4
                     elif 20 <= x <= 270 and 520 <= y <= 580:
+                        wyjscie_z_menu(session)
                         wylogowywanie(session)
                         actual = 0
                         option = 0
