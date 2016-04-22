@@ -417,7 +417,9 @@ class Server:
         """
         # send result
         msg = pickle.dumps((channel, data))
-        client_data = self.clients[client_id]
+        client_data = self.clients.get(client_id)
+        if not client_data:
+            return      # notifying not existing client
         client_data.socket.send(struct.pack('I', len(msg)))
         client_data.socket.send(msg)
 
