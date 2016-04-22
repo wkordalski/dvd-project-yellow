@@ -304,3 +304,31 @@ class WaitingRoom:
 
         return AsyncQuery(lambda: self.session.client.query(4, data), lambda r: r.check(), check_result_ok).run()
 
+
+class Pawn:
+    pass
+
+
+class Transformation:
+    def __init__(self, pawn):
+        pass
+
+    def rotate_clockwise(self):
+        pass
+
+
+class Game:
+    def __init__(self):
+        self.on_your_turn = None   # what to do on your turn
+        self.on_finish = None      # what to do when game is finished
+        # TODO - specify on_your_turn function specification
+
+        # TODO - sth more
+
+    def move(self, point, transformation):
+        # TODO
+        pass
+
+    def abandon(self):
+        # TODO
+        pass

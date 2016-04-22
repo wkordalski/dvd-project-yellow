@@ -134,6 +134,9 @@ def main():
 
 
     while window.is_open:
+        #SIEĆ
+        session.process_events()
+
         for event in window.events:
             if event == sf.CloseEvent:
                 window.close()
