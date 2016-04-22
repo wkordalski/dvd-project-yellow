@@ -46,8 +46,7 @@ def wylogowywanie(session):
 
 
 def zalogowani(session):
-    return ["Jas", "Stas", "Adas"]
-    #return session.get_waiting_room().result.get_online_users().result
+    return session.get_waiting_room().result.get_online_users().result
 
 
 def main():
