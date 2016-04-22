@@ -165,6 +165,10 @@ class UserManager:
         :param db_session:
         :return:
         """
+        self.disconnect_handlers = []
+
+        def disconnect_handler(client_id):
+            return self._on_client_disconnect(client_id)
 
         def permission_checker(client_id, module):
             return self._permission_checker(client_id, module)
@@ -172,6 +176,7 @@ class UserManager:
         def query_handler(client_id, data):
             return self._query_handler(client_id, data)
 
+        server.set_disconnect_handler(disconnect_handler)
         server.set_permission_checker(permission_checker)
         server.set_query_handler(3, query_handler)
 
@@ -187,6 +192,15 @@ class UserManager:
             return True
 
         return False
+
+    def _on_client_disconnect(self, client_id):
+        for handler in self.disconnect_handlers:
+            if handler:
+                handler(client_id)
+
+        if client_id in self.auth_status:
+            del self.client_users[self.auth_status[client_id].uid]
+            del self.auth_status[client_id]
 
     def get_users_client(self, user_id):
         return self.client_users.get(user_id)
@@ -218,6 +232,7 @@ class UserManager:
 
         elif data['command'] == 'sign-out':
             if client_id in self.auth_status:
+                del self.client_users[self.auth_status[client_id].uid]
                 del self.auth_status[client_id]
                 return {'status': 'ok'}
             else:
