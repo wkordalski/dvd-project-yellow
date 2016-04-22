@@ -33,7 +33,7 @@ def txt(x, y, color=sf.Color.BLACK, size=25, fo=font2, tek=""):
 
 
 def logowanie(session, lo, pa):
-    session.sign_in(lo, pa).result
+    session.sign_in(lo, pa)
     return session.get_signed_in_user().result
 
 
@@ -42,11 +42,12 @@ def rejestracja(session, lo, pa):
 
 
 def wylogowywanie(session):
-    session.sign_out().result
+    session.sign_out()
 
 
-def zalogowani():
-    return ["Jas", "Adas", "Kubus"]
+def zalogowani(session):
+    return ["Jas", "Stas", "Adas"]
+    #return session.get_waiting_room().result.get_online_users().result
 
 
 def main():
@@ -83,7 +84,13 @@ def main():
     przyjaciele, przyjaciele_txt = przycisk("Friends", 145, 390, 20, 255)
     zmiany, zmiany_txt = przycisk("Account settings", 145, 470, 20, 255)
     wyloguj, wyloguj_txt = przycisk("Log out", 145, 550, 20, 255)
-    
+
+    #Duża ramka na stronie głównej
+    box = sf.Sprite(sf.Texture.from_file(os.path.join(data_directory, "czerwony.JPG")))
+    box.texture_rectangle = sf.Rectangle((10, 10), (450, 380))
+    box.color = sf.Color(255, 255, 255, 100)  # RGB, jasność
+    box.position = sf.Vector2(300, 200)
+
     #Napis na grze lokalnej
     lazy = sf.Text("Error 404 - this page isn't available now, \nbecause programmers are too lazy. Sorry")
     lazy.font = font
@@ -104,8 +111,8 @@ def main():
     logerror_txt = txt(140, 50, color = GREY, size = 35, fo = font)
     logerror_txt.string = "Sorry, your login or password is incorrect.\n                 Please try again"
     logerror = 0
-    regerror_txt = txt(140, 50, color=GREY, size=35, fo=font)
-    regerror_txt.string = "This login is already used.\n                 Please try again"
+    regerror_txt = txt(223, 50, color=GREY, size=35, fo=font)
+    regerror_txt.string = "This login is already used.\n       Please try again"
     regerror = 0
 
 
@@ -124,9 +131,6 @@ def main():
 
 
     while window.is_open:
-        # SIEĆ
-        session.process_events()
-
         for event in window.events:
             if event == sf.CloseEvent:
                 window.close()
@@ -208,7 +212,7 @@ def main():
                 elif actual == 4:
                     if 20 <= x <= 270 and 200 <= y <= 260:
                         option = 1
-                    if 20 <= x <= 270 and 280 <= y <= 340:
+                    elif 20 <= x <= 270 and 280 <= y <= 340:
                         option = 2
                     elif 20 <= x <= 270 and 360 <= y <= 420:
                         option = 3
@@ -218,7 +222,8 @@ def main():
                         wylogowywanie(session)
                         actual = 0
                         option = 0
-
+                    else:
+                        pass
 
 
             #ZABAWY KLAWIATURĄ
@@ -284,10 +289,14 @@ def main():
             window.draw(wyloguj)
             window.draw(wyloguj_txt)
             if option == 1:
-                #prostokącik
-                for x in zalogowani():
-                    player = txt(400,400, tek=x)
+                window.draw(box)
+                heading = txt(300, 200, tek="Online Players", size = 33)
+                window.draw(heading)
+                counter = 0
+                for gamer in zalogowani(session):
+                    player = txt(300,250+31*counter, tek=gamer, color = sf.Color.RED, size = 27)
                     window.draw(player)
+                    counter+=1
 
             
         if actual == 3:
