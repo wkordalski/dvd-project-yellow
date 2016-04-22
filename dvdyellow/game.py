@@ -39,7 +39,7 @@ class AsyncQuery:
 
 class AsyncQueryChain:
     def __init__(self, query, *args):
-        self.queries = args
+        self.queries = list(args)
         self.queries.insert(0, query)
         self.current = 0
         self.started = False
@@ -53,7 +53,7 @@ class AsyncQueryChain:
         if old_started:
             raise AssertionError("Runned running query")
 
-        self.queries[0][0].run(results=self._all_results)
+        self.queries[0][0].run()
 
         return self
 
@@ -78,20 +78,20 @@ class AsyncQueryChain:
                         self._result = result
                         return True
                     else:
-                        self.queries[self.current][0].run(results=self._all_results)
+                        self.queries[self.current][0].run()
                         continue
             else:
                 return False
 
     @property
     def result(self):
-        while not self.checker(self.object):
+        while not self.ready:
             sleep(milliseconds(1))
         return self._result
     
     @property
     def all_results(self):
-        while not self.checker(self.object):
+        while not self.ready:
             sleep(milliseconds(1))
         return self._all_results
 
@@ -158,7 +158,8 @@ class Session:
         return AsyncQuery(lambda: self.client.query(3, data), lambda r: r.check(), result_processor).run()
 
     def get_waiting_room(self):
-        if self.waiting_room: return self.waiting_room
+        if self.waiting_room:
+            return AsyncQuery(lambda: None, lambda _: True, lambda _: self.waiting_room)
 
         data_sign_in = {
             'command': 'set-status',
@@ -187,12 +188,42 @@ class Session:
             else:
                 return None
 
-        return AsyncQueryChain([
+        return AsyncQueryChain(
             (AsyncQuery(lambda: self.client.query(4, data_sign_in), lambda r: r.check(), check_result_ok), lambda r: r),
             (AsyncQuery(lambda: self.client.query(4, data_listen), lambda r: r.check(), check_result_ok), lambda r: r),
-            (AsyncQuery(lambda: self.client.query(4, data_get), lambda r: r.check(), wr_setter), lambda r: r),
-        ]).run()
+            (AsyncQuery(lambda: self.client.query(4, data_get), lambda r: r.check(), wr_setter), lambda r: r)
+        ).run()
 
+    def del_waiting_room(self):
+        if not self.waiting_room:
+            return AsyncQuery(lambda: None, lambda _: True, lambda _: None)
+
+        data_sign_in = {
+            'command': 'set-status',
+            'new-status': 'disconnected'
+        }
+
+        data_listen = {
+            'command': 'stop-listening'
+        }
+
+        wr = WaitingRoom(self)
+
+        def notifications_handler(channel, data):
+            wr.on_change_status(channel, data)
+        self.client.set_notification_handler(13, notifications_handler)
+
+        def wr_setter(r):
+            if check_result_ok(r):
+                self.waiting_room = None
+                return True
+            else:
+                return False
+
+        return AsyncQueryChain(
+            (AsyncQuery(lambda: self.client.query(4, data_listen), lambda r: r.check(), check_result_ok), lambda r: r),
+            (AsyncQuery(lambda: self.client.query(4, data_sign_in), lambda r: r.check(), wr_setter), lambda r: r)
+        ).run()
 
 class User:
     def __init__(self, session, user_id):
@@ -224,9 +255,11 @@ class User:
         else:
             return AsyncQuery(lambda: None, lambda _: True, lambda _: self._name).run()
 
-    @property
-    def status(self):
-        return self.session.waiting_room.get_status_by_user(self)
+    def get_status(self):
+        return self.session.get_waiting_room().result.get_status_by_user(self)
+
+    def set_status(self, status):
+        return self.session.get_waiting_room().result.set_status_by_user(self, status)
 
 
 class WaitingRoom:
@@ -240,7 +273,7 @@ class WaitingRoom:
         if data['notification'] == 'status-change':
             uid = data.get('user')
             status = data.get('status')
-            old_status = self.status[uid] if uid in self.status[uid] else 'disconnected'
+            old_status = self.status[uid] if uid in self.status else 'disconnected'
 
             if status == 'disconnected':
                 del self.status[uid]
@@ -261,7 +294,13 @@ class WaitingRoom:
         else:
             return AsyncQuery(lambda: None, lambda _: True, lambda _: 'disconnected').run()
 
-    def set_status(self):
+    def set_status_by_user(self, user, status):
         # send query to change status
-        # returns AsyncQuery with True/False if it succeeded.
-        pass
+        data = {
+            'command': 'set-status',
+            'new-status': status,
+            'uid': user.id,
+        }
+
+        return AsyncQuery(lambda: self.session.client.query(4, data), lambda r: r.check(), check_result_ok).run()
+

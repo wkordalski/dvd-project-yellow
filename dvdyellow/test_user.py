@@ -1,7 +1,7 @@
 import threading
 from random import Random, randint
 from threading import Thread
-from time import sleep
+from sfml import sleep, milliseconds
 from unittest.case import TestCase
 
 from dvdyellow.game import make_session
@@ -24,6 +24,7 @@ class UserTests(TestCase):
 
             dbs = test_case.server_manager.db_session_type()
             dbs.add(User(name='john', password='best123'))
+            dbs.add(User(name='lazy', password=''))
             dbs.flush()
             test_case.server_manager.run()
 
@@ -31,8 +32,8 @@ class UserTests(TestCase):
         self.server_thread.start()
 
         while not self.server_started:
-            sleep(0.01)
-        sleep(0.1)
+            sleep(milliseconds(10))
+        sleep(milliseconds(100))
 
     def tearDown(self):
         self.server_manager.stop()
@@ -48,3 +49,54 @@ class UserTests(TestCase):
         self.assertIsNotNone(user, "User haven't logged in.")
         self.assertEqual(user.name.result, 'john')
         session.sign_out()
+
+    def test_user_get_status(self):
+        """
+        Check if signed in user has status 'connected'
+        """
+        session = make_session('localhost', self.port).result
+        session.sign_in('john', 'best123').result
+        user = session.get_signed_in_user().result
+        self.assertEqual(user.get_status().result, 'connected')
+        session.sign_out()
+
+    def test_user_status_monitoring(self):
+        """
+        Check if status is correctly stored.
+        """
+        session = make_session('localhost', self.port).result
+        session.sign_in('john', 'best123').result
+        session.get_waiting_room().result
+        user = session.get_signed_in_user().result
+
+        session2 = make_session('localhost', self.port).result
+        session2.sign_in('lazy', '').result
+        users = session2.get_waiting_room().result.get_online_users().result
+        self.assertEqual(len(users), 2)
+
+        user_names = ['john', 'lazy']
+        john = None
+        for u in users:
+            if u.id == user.id:
+                john = u
+
+            if u.name.result not in user_names:
+                user_names.remove(u.name)
+                self.assertTrue(False, "Unknown user")
+
+        self.assertEqual(john.get_status().result, 'connected')
+
+        user.set_status('coding').result
+
+        session2.process_events()
+
+        self.assertEqual(john.get_status().result, 'coding')
+
+        session.del_waiting_room().result
+        session.sign_out().result
+
+        session2.process_events()
+        self.assertEqual(john.get_status().result, 'disconnected')
+
+        session2.del_waiting_room().result
+        session2.sign_out().result

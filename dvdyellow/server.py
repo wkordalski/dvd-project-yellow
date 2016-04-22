@@ -257,12 +257,12 @@ class WaitingRoomManager:
     def __init__(self, server_manager : ServerManager):
         """
         Creates waiting room manager.
-        :param server:
+        :param server_manager:
         :return:
         """
 
         def query_handler(client_id, data):
-            self._query_handler(client_id, data)
+            return self._query_handler(client_id, data)
 
         server = server_manager.server
 
@@ -298,6 +298,8 @@ class WaitingRoomManager:
             if 'new-status' not in data:
                 return {'status': 'error', 'code': 'NO_NEW_STATUS'}
             user_id = self.user_manager.get_clients_user(client_id)
+            if 'uid' in data and data['uid'] != user_id:
+                return {'status': 'error', 'code': 'INVALID_USER'}
             if data['new-status'] == 'disconnected' and client_id in self.listeners:
                 self.listeners.discard(client_id)
             for i in self.listeners:
