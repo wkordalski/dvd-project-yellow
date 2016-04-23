@@ -343,31 +343,31 @@ class WaitingRoomManager:
 
 
 class GameData:
-    def __init__(self, player_1_client, player_2_client, gameboard, gameboard2, gamepawn):
+    def __init__(self, player_1_client, player_2_client, game_board, game_board_2, game_pawn):
         """
         Creates information about game.
         :param player_1_client: nr of first client playing the game
         :param player_2_client: nr of second client playting the game
-        :param gameboard: 2 dimensional table with fields point values
-        :param gameboard2: 2 dimensional table with game history
-        :param gamepawn: 2 dimensional table with game pawn
+        :param game_board: 2 dimensional table with fields point values
+        :param game_board_2: 2 dimensional table with game history
+        :param game_pawn: 2 dimensional table with game pawn
         :return:
         """
         self.player_client = [0 for i in range(2)]
         self.player_client[0] = player_1_client
         self.player_client[1] = player_2_client
-        self.game_board_point = gameboard
-        self.game_board_move = gameboard2
-        self.game_pawn = gamepawn
+        self.game_board_point = game_board
+        self.game_board_move = game_board_2
+        self.game_pawn = game_pawn
         self.current_player = 1
 
 
 class GameManager:
-    def __init__(self, server, usermanager, db_session):
+    def __init__(self, server, user_manager, db_session):
         """
         Creates game manager.
         :param server: server used to communication
-        :param usermanager: part of server manager responsible for authentication
+        :param user_manager: part of server manager responsible for authentication
         :return:
         """
 
@@ -377,7 +377,7 @@ class GameManager:
         server.set_query_handler(5, query_handler)
 
         self.server = server
-        self.usermanager = usermanager
+        self.user_manager = user_manager
         self.random_one = None
         self.game_data = dict()
         self.counter = 0
@@ -405,26 +405,26 @@ class GameManager:
         :param pawn: pawn to be rotated
         :return: rotated pawn
         """
-        newpawn = [[0 for i in range(len(pawn))] for j in range(len(pawn[0]))]
+        new_pawn = [[0 for i in range(len(pawn))] for j in range(len(pawn[0]))]
         for i in range(len(pawn)):
             for j in range(len(pawn[0])):
                 if pawn[i][j] == 1:
-                    newpawn[j][len(pawn) - i - 1] = 1
-        return newpawn
+                    new_pawn[j][len(pawn) - i - 1] = 1
+        return new_pawn
 
-    def _print_move(self, pawn, x, y, newboard, nr):
+    def _print_move(self, pawn, x, y, new_board, nr):
         """
         :param pawn: pawn to be printed on board
         :param x: x coordinate of the move
         :param y: y coordinate of the move
-        :param newboard: board on which the move takes place
+        :param new_oard: board on which the move takes place
         :param nr: nr which should be printed
         :return:
         """
         for i in range(len(pawn)):
             for j in range(len(pawn[0])):
                 if pawn[i][j] == 1:
-                    newboard[x + i][y + j] = nr
+                    new_board[x + i][y + j] = nr
 
     def _transform_after_move(self, pawn, moveboard, nr):
         """
@@ -458,26 +458,26 @@ class GameManager:
         :param player_2_client: second player playing game
         :return:
         """
-        gamepawns = self.db_session.query(GamePawn)
-        random_gamepawn_raw = gamepawns.offset(int(int(gamepawns.count() * random.random()))).first()
-        pawn_string = random_gamepawn_raw.shapestring
-        pawn_table = [[0 for j in range(random_gamepawn_raw.height)] for i in range(random_gamepawn_raw.width)]
-        for i in range(random_gamepawn_raw.width):
-            for j in range(random_gamepawn_raw.height):
-                if pawn_string[j * random_gamepawn_raw.width + i] == '1':
+        game_pawns = self.db_session.query(GamePawn)
+        random_game_pawn_raw = game_pawns.offset(int(int(game_pawns.count() * random.random()))).first()
+        pawn_string = random_game_pawn_raw.shapestring
+        pawn_table = [[0 for j in range(random_game_pawn_raw.height)] for i in range(random_game_pawn_raw.width)]
+        for i in range(random_game_pawn_raw.width):
+            for j in range(random_game_pawn_raw.height):
+                if pawn_string[j * random_game_pawn_raw.width + i] == '1':
                     pawn_table[i][j] = 1
-        gameboards = self.db_session.query(GameBoard)
-        random_gameboard_raw = gameboards.offset(int(int(gameboards.count() * random.random()))).first()
-        game_string = random_gameboard_raw.shapestring
-        board_table2 = [[-3 for j in range(random_gameboard_raw.height)] for i in range(random_gameboard_raw.width)]
-        for i in range(random_gameboard_raw.width):
-            for j in range(random_gameboard_raw.height):
-                if game_string[j * random_gameboard_raw.width + i] == '1':
+        game_boards = self.db_session.query(GameBoard)
+        random_game_board_raw = game_boards.offset(int(int(game_boards.count() * random.random()))).first()
+        game_string = random_game_board_raw.shapestring
+        board_table2 = [[-3 for j in range(random_game_board_raw.height)] for i in range(random_game_board_raw.width)]
+        for i in range(random_game_board_raw.width):
+            for j in range(random_game_board_raw.height):
+                if game_string[j * random_game_board_raw.width + i] == '1':
                     board_table2[i][j] = 0
         self._transform_after_move(pawn_table, board_table2, -3)
-        board_table = [[0 for j in range(random_gameboard_raw.height)] for i in range(random_gameboard_raw.width)]
-        for i in range(random_gameboard_raw.width):
-            for j in range(random_gameboard_raw.height):
+        board_table = [[0 for j in range(random_game_board_raw.height)] for i in range(random_game_board_raw.width)]
+        for i in range(random_game_board_raw.width):
+            for j in range(random_game_board_raw.height):
                 if board_table2[i][j] == '0':
                     board_table[i][j] = random.randint(1, 9)
 
@@ -497,12 +497,12 @@ class GameManager:
                 self.counter += 1
                 self._start_random_game(self.counter, self.random_one, client_id)
                 self.server.notify(self.random_one, 14, {'notification': 'opponent-found',
-                                                         'opponent-id': self.usermanager.get_clients_user(client_id),
+                                                         'opponent-id': self.user_manager.get_clients_user(client_id),
                                                          'game-nr': self.counter, 'player-number': 1,
                                                          'game-board': self.game_data[self.counter].game_board_point,
                                                          'game-pawn': self.game_data[self.counter].game_pawn})
                 return_value = {'status': 'ok', 'game-status': 'found',
-                                'opponent-id': self.usermanager.get_users_client(self.random_one),
+                                'opponent-id': self.user_manager.get_users_client(self.random_one),
                                 'game-nr': self.counter, 'player-number': 2,
                                 'game-board': self.game_data[self.counter].game_board_point,
                                 'game-pawn': self.game_data[self.counter].game_pawn}
@@ -518,10 +518,10 @@ class GameManager:
                 return {'status': 'error', 'code': 'BAD_GAME_NR'}
             elif 'player-nr' not in data:
                 return {'status': 'error', 'code': 'NO_PLAYER'}
-            elif self.game_data[data['game-nr']].player_client[data['player-nr']] != client_id:
+            elif self.game_data[data['game-nr']].player_client[data['player-nr'] - 1] != client_id:
                 return {'status': 'error', 'code': 'BAD_GAME_PLAYER_NR'}
             self.server.notify(self.game_data[data['game-nr']].player_client[2 - data['player-nr']], 15,
-                               {'notification': 'game-finished', 'result': 'won', 'detail': 'enemy-agandoned-game',
+                               {'notification': 'game-finished', 'result': 'won', 'detail': 'enemy-abandoned-game',
                                 'game-nr': data['game-nr']})
             del self.game_data[data['game-nr']]
             return {'status': 'ok', 'game-result': 'defeated', 'detail': 'game-abandoned'}
@@ -537,7 +537,7 @@ class GameManager:
                 return {'status': 'error', 'code': 'BAD_GAME_NR'}
             elif 'player-nr' not in data:
                 return {'status': 'error', 'code': 'NO_PLAYER'}
-            elif self.game_data[data['game-nr']].player_client[data['player-nr']] != client_id:
+            elif self.game_data[data['game-nr']].player_client[data['player-nr'] - 1] != client_id:
                 return {'status': 'error', 'code': 'BAD_GAME_PLAYER_NR'}
             elif data['player-nr'] != self.game_data[data['game-nr']].current_player:
                 return {'status': 'error', 'code': 'WRONG_TURN'}
