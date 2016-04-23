@@ -417,7 +417,7 @@ class GameManager:
         :param pawn: pawn to be printed on board
         :param x: x coordinate of the move
         :param y: y coordinate of the move
-        :param new_oard: board on which the move takes place
+        :param new_board: board on which the move takes place
         :param nr: nr which should be printed
         :return:
         """
