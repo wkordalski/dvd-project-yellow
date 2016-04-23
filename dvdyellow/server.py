@@ -363,7 +363,7 @@ class GameManager:
         """
 
         def query_handler(client_id, data):
-            self._query_handler(client_id, data)
+            return self._query_handler(client_id, data)
 
         server.set_query_handler(5, query_handler)
 
@@ -400,7 +400,7 @@ class GameManager:
 
     def _transform_after_move(self, pawn, moveboard, nr):
         temppawn = pawn
-        newboard = [[1 for j in range(len(moveboard))] for i in range(len(moveboard[0]))]
+        newboard = [[1 for j in range(len(moveboard[0]))] for i in range(len(moveboard))]
         for i in range(len(moveboard)):
             for j in range(len(moveboard[0])):
                 if moveboard[i][j] != 0:
@@ -423,7 +423,7 @@ class GameManager:
         pawn_table = [[0 for j in range(random_gamepawn_raw.height)] for i in range(random_gamepawn_raw.width)]
         for i in range(random_gamepawn_raw.width):
             for j in range(random_gamepawn_raw.height):
-                if pawn_string[j * random_gamepawn_raw.height + i] == '1':
+                if pawn_string[j * random_gamepawn_raw.width + i] == '1':
                     pawn_table[i][j] = 1
         gameboards = self.db_session.query(GameBoard)
         random_gameboard_raw = gameboards.offset(int(int(gameboards.count() * random.random()))).first()
@@ -431,7 +431,7 @@ class GameManager:
         board_table2 = [[-3 for j in range(random_gameboard_raw.height)] for i in range(random_gameboard_raw.width)]
         for i in range(random_gameboard_raw.width):
             for j in range(random_gameboard_raw.height):
-                if game_string[j * random_gameboard_raw.height + i] == '1':
+                if game_string[j * random_gameboard_raw.width + i] == '1':
                     board_table2[i][j] = 0
         self._transform_after_move(pawn_table, board_table2, -3)
         board_table = [[0 for j in range(random_gameboard_raw.height)] for i in range(random_gameboard_raw.width)]
@@ -453,17 +453,17 @@ class GameManager:
                 self.server.notify(self.random_one, 14, {'notification': 'opponent-found',
                                                          'opponent-id': self.usermanager.get_clients_user(client_id),
                                                          'game-nr': self.counter, 'player-number': 1,
-                                                         'game_board': self.game_data[self.counter].game_board_point,
+                                                         'game-board': self.game_data[self.counter].game_board_point,
                                                          'game-pawn': self.game_data[self.counter].game_pawn})
                 return_value = {'status': 'ok', 'game-status': 'found',
                                 'opponent-id': self.usermanager.get_users_client(self.random_one),
                                 'game-nr': self.counter, 'player-number': 2,
-                                'game_board': self.game_data[self.counter].game_board_point,
+                                'game-board': self.game_data[self.counter].game_board_point,
                                 'game-pawn': self.game_data[self.counter].game_pawn}
                 self.random_one = None
                 return return_value
             else:
-                random_one = client_id
+                self.random_one = client_id
                 return {'status': 'ok', 'game-status': 'waiting'}
         elif data['command'] == 'abandon-game':
             if 'game-nr' not in data:

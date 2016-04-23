@@ -112,12 +112,23 @@ class Session:
     def __init__(self, client):
         self.client = client
         self.known_users = dict()
+        self.games = dict()     # id -> game object
         self.waiting_room = None
+        self.on_game_found = None
+
+        client.set_notification_handler(14, lambda ch, data: self._on_new_game(data))
+        client.set_notification_handler(15, lambda ch, data: self._on_your_turn_in_game(data))
 
     def _make_user(self, uid):
         if uid not in self.known_users:
             self.known_users[uid] = User(self, uid)
         return self.known_users[uid]
+
+    def _make_pawn(self, pawn_data):
+        return Pawn(self, pawn_data)
+
+    def _make_board(self, board_data):
+        return Board(self, board_data)
 
     def process_events(self):
         self.client.receive_all()
@@ -156,6 +167,24 @@ class Session:
                 return None
 
         return AsyncQuery(lambda: self.client.query(3, data), lambda r: r.check(), result_processor).run()
+
+    def _on_new_game(self, data):
+        game_id = data['game-nr']
+        game = Game(session=self,
+                    gid=game_id,
+                    opponent=self._make_user(data['opponent-id']),
+                    pawn=self._make_pawn(data['game-pawn']),
+                    board=self._make_board(data['game-board']),
+                    player_number=data['player-number'])
+
+        self.games[game_id] = game
+        if self.on_game_found:
+            self.on_game_found(game)
+        return game
+
+    def _on_your_turn_in_game(self, data):
+        # TODO - call right game object (sb's move or finished)
+        pass
 
     def get_waiting_room(self):
         if self.waiting_room:
@@ -224,6 +253,30 @@ class Session:
             (AsyncQuery(lambda: self.client.query(4, data_listen), lambda r: r.check(), check_result_ok), lambda r: r),
             (AsyncQuery(lambda: self.client.query(4, data_sign_in), lambda r: r.check(), wr_setter), lambda r: r)
         ).run()
+
+    def set_want_to_play(self):
+        data = {
+            'command': 'find-random-game'
+        }
+
+        def result_processor(r):
+            # zwraca None jeśli trzeba czekać lub zwraca grę
+            if not check_result_ok(r) or 'game-status' not in r.response:
+                raise AssertionError("Server error - FIXIT")
+            if r.response['game-status'] == 'waiting':
+                return None     # waiting...
+            else:
+                return self._on_new_game(r.response)
+
+        return AsyncQuery(lambda: self.client.query(5, data), lambda r: r.check(), result_processor).run()
+
+    def cancel_want_to_play(self):
+        data = {
+            'command': 'quit-searching'
+        }
+
+        return AsyncQuery(lambda: self.client.query(5, data), lambda r: r.check(), check_result_ok).run()
+
 
 class User:
     def __init__(self, session, user_id):
@@ -305,8 +358,14 @@ class WaitingRoom:
         return AsyncQuery(lambda: self.session.client.query(4, data), lambda r: r.check(), check_result_ok).run()
 
 
+class Board:
+    def __init__(self, session, data):
+        pass
+
+
 class Pawn:
-    pass
+    def __init__(self, session, data):
+        pass
 
 
 class Transformation:
@@ -318,12 +377,22 @@ class Transformation:
 
 
 class Game:
-    def __init__(self):
+    def __init__(self, session, gid, player_number, opponent, pawn, board):
+        self.session = session
+        self.gid = gid
+        self.player_number = player_number
+        self.opponent = opponent
+        self.pawn = pawn
+        self.board = board
         self.on_your_turn = None   # what to do on your turn
         self.on_finish = None      # what to do when game is finished
         # TODO - specify on_your_turn function specification
 
         # TODO - sth more
+
+    def get_active_player(self):
+        # TODO - return current playing player or None if game finished
+        pass
 
     def move(self, point, transformation):
         # TODO
