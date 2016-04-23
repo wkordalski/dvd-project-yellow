@@ -251,7 +251,7 @@ class UserManager:
                 return {'status': 'ok', 'authenticated': False}
 
         elif data['command'] == 'sign-up':
-            if 'username' not in data:
+            if 'username' not in data or data['username'] == '':
                 return {'status': 'error', 'code': 'NO_USERNAME'}
             if 'password' not in data:
                 return {'status': 'error', 'code': 'NO_PASSWORD'}
