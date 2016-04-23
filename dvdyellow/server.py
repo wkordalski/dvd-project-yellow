@@ -525,6 +525,11 @@ class GameManager:
                                 'game-nr': data['game-nr']})
             del self.game_data[data['game-nr']]
             return {'status': 'ok', 'game-result': 'defeated', 'detail': 'game-abandoned'}
+        elif data['command'] == 'quit-searching':
+            if client_id != self.random_one:
+                return {'status': 'error', 'code': 'NOT_SEARCHING'}
+            self.random_one = None
+            return {'status': 'ok'}
         elif data['command'] == 'move':
             if 'game-nr' not in data:
                 return {'status': 'error', 'code': 'NO_GAME_NR'}
