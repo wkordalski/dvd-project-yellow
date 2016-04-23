@@ -161,8 +161,8 @@ class UserManager:
     def __init__(self, server, db_session):
         """
         Creates user manager.
-        :param server:
-        :param db_session:
+        :param server: server used to communication
+        :param db_session: connection to database
         :return:
         """
         self.disconnect_handlers = []
@@ -209,6 +209,11 @@ class UserManager:
         return self.auth_status[client_id].uid
 
     def _query_handler(self, client_id, data):
+        """
+        :param client_id: id of client which sent the query
+        :param data: query to server
+        :return:
+        """
         if 'command' not in data:
             return None
 
@@ -272,7 +277,7 @@ class WaitingRoomManager:
     def __init__(self, server_manager : ServerManager):
         """
         Creates waiting room manager.
-        :param server_manager:
+        :param server_manager: ServerManager using this class
         :return:
         """
 
@@ -289,6 +294,11 @@ class WaitingRoomManager:
         self.user_manager = server_manager.user_manager
 
     def _query_handler(self, client_id, data):
+        """
+        :param client_id: id of client sending query
+        :param data: query to server
+        :return: response to client
+        """
         if 'command' not in data:
             return None
 
@@ -333,15 +343,14 @@ class WaitingRoomManager:
 
 
 class GameData:
-    def __init__(self, number, player_1_client, player_2_client, gameboard, gameboard2, gamepawn):
+    def __init__(self, player_1_client, player_2_client, gameboard, gameboard2, gamepawn):
         """
         Creates information about game.
-        :param number:
-        :param player_1_client:
-        :param player_2_client:
-        :param gameboard:
-        :param gameboard2:
-        :param gamepawn:
+        :param player_1_client: nr of first client playing the game
+        :param player_2_client: nr of second client playting the game
+        :param gameboard: 2 dimensional table with fields point values
+        :param gameboard2: 2 dimensional table with game history
+        :param gamepawn: 2 dimensional table with game pawn
         :return:
         """
         self.player_client = [0 for i in range(2)]
@@ -357,13 +366,13 @@ class GameManager:
     def __init__(self, server, usermanager, db_session):
         """
         Creates game manager.
-        :param server:
-        :param usermanager:
+        :param server: server used to communication
+        :param usermanager: part of server manager responsible for authentication
         :return:
         """
 
         def query_handler(client_id, data):
-            self._query_handler(client_id, data)
+            return self._query_handler(client_id, data)
 
         server.set_query_handler(5, query_handler)
 
@@ -375,6 +384,13 @@ class GameManager:
         self.db_session = db_session
 
     def _check_move(self, x, y, board, pawn):
+        """
+        :param x: x coordinate of the move
+        :param y: y coordinate of the move
+        :param board: game history board on which the mobe would be performed
+        :param pawn: pawn which would be used for the move
+        :return: True if move is legal, False otherwise
+        """
         for i in range(len(pawn)):
             for j in range(len(pawn[0])):
                 try:
@@ -385,6 +401,10 @@ class GameManager:
         return True
 
     def _clockwised_pawn(self, pawn):
+        """
+        :param pawn: pawn to be rotated
+        :return: rotated pawn
+        """
         newpawn = [[0 for i in range(len(pawn))] for j in range(len(pawn[0]))]
         for i in range(len(pawn)):
             for j in range(len(pawn[0])):
@@ -393,12 +413,26 @@ class GameManager:
         return newpawn
 
     def _print_move(self, pawn, x, y, newboard, nr):
+        """
+        :param pawn: pawn to be printed on board
+        :param x: x coordinate of the move
+        :param y: y coordinate of the move
+        :param newboard: board on which the move takes place
+        :param nr: nr which should be printed
+        :return:
+        """
         for i in range(len(pawn)):
             for j in range(len(pawn[0])):
                 if pawn[i][j] == 1:
                     newboard[x + i][y + j] = nr
 
     def _transform_after_move(self, pawn, moveboard, nr):
+        """
+        :param pawn: pawn used for the game
+        :param moveboard: game history board
+        :param nr: nr which should be printed on unreachable fields
+        :return:
+        """
         temppawn = pawn
         newboard = [[1 for j in range(len(moveboard))] for i in range(len(moveboard[0]))]
         for i in range(len(moveboard)):
@@ -417,6 +451,13 @@ class GameManager:
                     moveboard[i][j] = nr
 
     def _start_random_game(self, game_number, player_1_client, player_2_client):
+        """
+        Puts information about game into game_data
+        :param game_number: number of the game to be started
+        :param player_1_client: first player playing game
+        :param player_2_client: second player playing game
+        :return:
+        """
         gamepawns = self.db_session.query(GamePawn)
         random_gamepawn_raw = gamepawns.offset(int(int(gamepawns.count() * random.random()))).first()
         pawn_string = random_gamepawn_raw.shapestring
@@ -440,10 +481,15 @@ class GameManager:
                 if board_table2[i][j] == '0':
                     board_table[i][j] = random.randint(1, 9)
 
-        self.game_data[game_number] = GameData(game_number, player_1_client, player_2_client, board_table, board_table2,
+        self.game_data[game_number] = GameData(player_1_client, player_2_client, board_table, board_table2,
                                                pawn_table)
 
     def _query_handler(self, client_id, data):
+        """
+        :param client_id: id of client sending query
+        :param data: query content
+        :return: response to client
+        """
         if 'command' not in data:
             return None
         elif data['command'] == 'find-random-game':
