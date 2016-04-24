@@ -443,8 +443,8 @@ class GameManager:
             temppawn = self._clockwised_pawn(temppawn)
             for i in range(len(moveboard)):
                 for j in range(len(moveboard[0])):
-                    if self._check_move(i, j, moveboard, pawn):
-                        self._print_move(pawn, i, j, newboard, 0)
+                    if self._check_move(i, j, moveboard, temppawn):
+                        self._print_move(temppawn, i, j, newboard, 0)
         for i in range(len(moveboard)):
             for j in range(len(moveboard[0])):
                 if newboard[i][j] == 1:
