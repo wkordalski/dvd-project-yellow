@@ -127,9 +127,6 @@ class Session:
     def _make_pawn(self, pawn_data):
         return Pawn(self, pawn_data)
 
-    def _make_board(self, board_data):
-        return Board(self, board_data)
-
     def process_events(self):
         self.client.receive_all()
 
@@ -174,7 +171,7 @@ class Session:
                     gid=game_id,
                     opponent=self._make_user(data['opponent-id']),
                     pawn=self._make_pawn(data['game-pawn']),
-                    board=self._make_board(data['game-board']),
+                    point_board=data['game-board'],
                     player_number=data['player-number'])
 
         self.games[game_id] = game
@@ -184,7 +181,9 @@ class Session:
 
     def _on_your_turn_in_game(self, data):
         # TODO - call right game object (sb's move or finished)
-        pass
+        game_id = data['game-nr']
+        game = self.games.get(game_id)
+        if game: game._notification(data)
 
     def get_waiting_room(self):
         if self.waiting_room:
@@ -358,46 +357,156 @@ class WaitingRoom:
         return AsyncQuery(lambda: self.session.client.query(4, data), lambda r: r.check(), check_result_ok).run()
 
 
-class Board:
-    def __init__(self, session, data):
-        pass
-
-
 class Pawn:
     def __init__(self, session, data):
-        pass
+        self.session = session
+        self.data = data
+        self.width = len(data)
+        self.height = len(data[0])
+
+    def get_pawn_point(self, x, y):
+        return self.data[x][y]
 
 
 class Transformation:
     def __init__(self, pawn):
+        self._rot = 0\
+        self._pawn = pawn
         pass
 
     def rotate_clockwise(self):
-        pass
+        self._rot = (self._rot + 1) % 4
+
+    @property
+    def rotation(self):
+        return self._rot
+
+    @property
+    def width(self):
+        if self._rot % 2 == 0:
+            return self._pawn.width
+        else:
+            return self._pawn.height
+
+    @property
+    def height(self):
+        if self._rot % 2 == 0:
+            return self._pawn.height
+        else:
+            return self._pawn.width
+
+    def get_pawn_point(self, x, y):
+        if self._rot == 0:
+            return self._pawn.get_pawn_point(x, y)
+        if self._rot == 1:
+            return self._pawn.get_pawn_point(y, self.width - x - 1)
+        if self._rot == 2:
+            return self._pawn.get_pawn_point(self.width - x - 1, self.height - y - 1)
+        if self._rot == 3:
+            return self._pawn.get_pawn_point(self.height - y - 1, x)
 
 
 class Game:
-    def __init__(self, session, gid, player_number, opponent, pawn, board):
+    def __init__(self, session, gid, player_number, opponent, pawn, point_board):
         self.session = session
         self.gid = gid
         self.player_number = player_number
         self.opponent = opponent
         self.pawn = pawn
-        self.board = board
+        self.point_board = point_board
+        self.width = len(point_board)
+        self.height = len(point_board[0])
         self.on_your_turn = None   # what to do on your turn (Game -> ())
         self.on_finish = None      # what to do when game is finished (Game -> ())
-        # TODO - specify on_your_turn function specification
+        self.result = None         # 'won', 'defeated' or 'draw' when game finished
+        self.move_board = [[-3 if self.point_board[i][j] == 0 else 0 for j in self.height] for i in self.width]
+        self.active_player = 1
 
-        # TODO - sth more
+    def get_field(self, x, y):
+        """
+        Gets information about specific field.
+        First element of result is:
+          0     - if player can put there the pawn
+          1/2   - if player 1/2 got this field
+          -1/-2 - if player 1/2 blocked this field.
+          -3    - if this field is ungettable
+        :param x: X coordinate of the field.
+        :param y: Y coordinate of the field.
+        :return: Tuple containing who has the field and pointing information.
+        """
+        return self.move_board[x][y], self.point_board[x][y]
 
-    def get_active_player(self):
-        # TODO - return current playing player or None if game finished
-        pass
+    @property
+    def is_finished(self):
+        return self.result is not None
+
+    def is_active_player(self):
+        return self.active_player == self.player_number and not self.is_finished
 
     def move(self, point, transformation):
-        # TODO
-        pass
+        if self.is_finished:
+            raise AssertionError("The game was finished!")
+        data = {
+            'command': 'move',
+            'game-nr': self.gid,
+            'player-nr': self.player_number,
+            'x': point[0], 'y': point[1],
+            'rotation': transformation.rotation
+        }
+
+        def result_processor(r):
+            if r and r.response.get('status') == 'ok':
+                if r.response.get('game-status') == 'opponent-turn':
+                    self.player_points = data['player_points']
+                    self.move_board = data.get('game_move_board')   # TODO - operator [] zamiast get
+                elif r.response.get('game-status') == 'game-finished':
+                    # game finished
+                    if data['winner'] == 0:
+                        self.result = 'draw'
+                    elif data['winner'] == self.player_number:
+                        self.result = 'won'
+                    else:
+                        self.result = 'defeat'
+                    self.player_points = data['player_points']
+                    self.move_board = data.get('game_move_board')   # TODO - operator [] zamiast get
+                return True
+            else:
+                return False
+
+        return AsyncQuery(lambda: self.session.client.query(5, data), lambda r: r.check(), result_processor).run()
 
     def abandon(self):
-        # TODO
-        pass
+        if self.is_finished:
+            raise AssertionError("The game was finished!")
+        data = {
+            'command': 'abandon-game',
+            'game-nr': self.gid,
+            'player-nr': self.player_number,
+        }
+
+        def result_processor(r):
+            if r and r.response.get('status') == 'ok':
+                self.result = 'defeated'
+                return True
+            else:
+                return False
+
+        return AsyncQuery(lambda: self.session.client.query(5, data), lambda r: r.check(), result_processor).run()
+
+    def _notification(self, data):
+        if data.get('notification') == 'game-finished':
+            # game finished
+            if data['winner'] == 0:
+                self.result = 'draw'
+            elif data['winner'] == self.player_number:
+                self.result = 'won'
+            else:
+                self.result = 'defeat'
+            self.player_points = data['player_points']
+            self.move_board = data.get('game_move_board')   # TODO - operator [] zamiast get
+        elif data.get('notification') == 'your-new-turn':
+            # your turn
+            self.move_board = data['game_move_board']
+            self.player_points = data['player_points']
+            if self.on_your_turn:
+                self.on_your_turn(self)
