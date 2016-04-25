@@ -479,7 +479,7 @@ class GameManager:
             for j in range(random_game_board_raw.height):
                 if game_string[j * random_game_board_raw.width + i] == '1':
                     board_table2[i][j] = 0
-        self._transform_after_move(pawn_table, board_table2, -3)
+        #self._transform_after_move(pawn_table, board_table2, -3)
         board_table = [[0 for j in range(random_game_board_raw.height)] for i in range(random_game_board_raw.width)]
         for i in range(random_game_board_raw.width):
             for j in range(random_game_board_raw.height):

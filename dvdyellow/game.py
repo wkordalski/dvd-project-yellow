@@ -422,7 +422,7 @@ class Game:
         self.on_your_turn = None   # what to do on your turn (Game -> ())
         self.on_finish = None      # what to do when game is finished (Game -> ())
         self.result = None         # 'won', 'defeated' or 'draw' when game finished
-        self.move_board = [[0 for j in range(self.height)] for i in range(self.width)]
+        self.move_board = [[-3 if self.point_board[i][j] == 0 else 0 for j in range(self.height)] for i in range(self.width)]
         self.active_player = 1
 
     def get_field(self, x, y):
