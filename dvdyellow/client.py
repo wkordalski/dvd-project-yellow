@@ -6,7 +6,8 @@ from math import floor
 data_directory = 'data'
 font = sf.Font.from_file(os.path.join(data_directory, "celtic.ttf"))
 font2 = sf.Font.from_file(os.path.join(data_directory, "arial.ttf"))
-
+gra = None
+waiting = 0
 
 # przycisk
 def przycisk(napis, x, y, minus_y, jasnosc, lenx=250, leny=60, fo=font, color=sf.Color.BLACK, style=sf.Text.BOLD):
@@ -21,6 +22,12 @@ def przycisk(napis, x, y, minus_y, jasnosc, lenx=250, leny=60, fo=font, color=sf
     tekst.color = color
     tekst.position = x-6.35*len(napis), y-minus_y
     return pole, tekst
+
+
+def stop_waiting(game):
+    waiting = 0
+    global gra
+    gra = game
 
 
 def txt(x, y, color=sf.Color.BLACK, size=25, fo=font2, tek=""):
@@ -155,7 +162,8 @@ def main():
     option = 0  # 1-new game, 2- ranking, 3-friends, 4-settings
 
     x, y = 0, 0
-    gra = None
+
+    session.on_game_found = stop_waiting
 
     while window.is_open:
         # SIEĆ
