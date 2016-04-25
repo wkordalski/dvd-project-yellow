@@ -9,6 +9,9 @@ Database = declarative_base()
 
 
 class User(Database):
+    """
+    Stores data for user registration and autorization
+    """
     __tablename__ = 'users'
 
     id = Column(Integer, primary_key=True)
@@ -17,6 +20,9 @@ class User(Database):
 
 
 class GameBoard(Database):
+    """
+    Stores data about game boards
+    """
     __tablename__ = 'gameboards'
 
     id = Column(Integer, primary_key=True)
@@ -27,6 +33,9 @@ class GameBoard(Database):
     shapestring = Column(String)
 
 class GamePawn(Database):
+    """
+    Stores data about game pawns (also called figures)
+    """
     __tablename__ = 'gamepawns'
 
     id = Column(Integer, primary_key=True)
