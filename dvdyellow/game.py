@@ -384,8 +384,8 @@ class Game:
         self.opponent = opponent
         self.pawn = pawn
         self.board = board
-        self.on_your_turn = None   # what to do on your turn
-        self.on_finish = None      # what to do when game is finished
+        self.on_your_turn = None   # what to do on your turn (Game -> ())
+        self.on_finish = None      # what to do when game is finished (Game -> ())
         # TODO - specify on_your_turn function specification
 
         # TODO - sth more

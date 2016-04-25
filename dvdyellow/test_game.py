@@ -80,3 +80,43 @@ class GameTests(TestCase):
         session2.del_waiting_room().result
         session2.sign_out().result
 
+    def test_user_want_to_play_cancellation(self):
+        """
+        Two users wants to play a game but the first one cancels it request.
+        """
+        session1 = make_session('localhost', self.port).result
+        session1.sign_in('john', 'best123').result
+
+        session2 = make_session('localhost', self.port).result
+        session2.sign_in('lazy', '').result
+
+        game1 = None
+
+        def game_found(game):
+            nonlocal game1
+            game1 = game
+
+        session1.on_game_found = game_found
+
+        r = session1.set_want_to_play()
+        self.assertIsNone(r.result)
+
+        r = session1.cancel_want_to_play()
+        self.assertTrue(r.result)
+
+        r = session2.set_want_to_play()
+        game2 = r.result
+
+        session1.process_events()
+        session2.process_events()
+
+        self.assertIsNone(game1)
+        self.assertIsNone(game2)
+
+        session1.del_waiting_room().result
+        session1.sign_out().result
+
+        session2.process_events()
+
+        session2.del_waiting_room().result
+        session2.sign_out().result
