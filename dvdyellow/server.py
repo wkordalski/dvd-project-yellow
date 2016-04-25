@@ -426,29 +426,29 @@ class GameManager:
                 if pawn[i][j] == 1:
                     new_board[x + i][y + j] = nr
 
-    def _transform_after_move(self, pawn, moveboard, nr):
+    def _transform_after_move(self, pawn, move_board, nr):
         """
         :param pawn: pawn used for the game
-        :param moveboard: game history board
+        :param move_board: game history board
         :param nr: nr which should be printed on unreachable fields
         :return:
         """
-        temppawn = pawn
-        newboard = [[1 for j in range(len(moveboard[0]))] for i in range(len(moveboard))]
-        for i in range(len(moveboard)):
-            for j in range(len(moveboard[0])):
-                if moveboard[i][j] != 0:
-                    newboard[i][j] = 0
+        temp_pawn = pawn
+        new_board = [[1 for j in range(len(move_board[0]))] for i in range(len(move_board))]
+        for i in range(len(move_board)):
+            for j in range(len(move_board[0])):
+                if move_board[i][j] != 0:
+                    new_board[i][j] = 0
         for k in range(4):
-            temppawn = self._clockwised_pawn(temppawn)
-            for i in range(len(moveboard)):
-                for j in range(len(moveboard[0])):
-                    if self._check_move(i, j, moveboard, temppawn):
-                        self._print_move(temppawn, i, j, newboard, 0)
-        for i in range(len(moveboard)):
-            for j in range(len(moveboard[0])):
-                if newboard[i][j] == 1:
-                    moveboard[i][j] = nr
+            temp_pawn = self._clockwised_pawn(temp_pawn)
+            for i in range(len(move_board)):
+                for j in range(len(move_board[0])):
+                    if self._check_move(i, j, move_board, temp_pawn):
+                        self._print_move(temp_pawn, i, j, new_board, 0)
+        for i in range(len(move_board)):
+            for j in range(len(move_board[0])):
+                if new_board[i][j] == 1:
+                    move_board[i][j] = nr
 
     def _start_random_game(self, game_number, player_1_client, player_2_client):
         """
