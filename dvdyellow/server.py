@@ -32,7 +32,7 @@ class ServerManager:
         self.waiting_room = WaitingRoomManager(self)
         self.game_manager = GameManager(self.server, self.user_manager, self.db_session)
         self.db_session.add(GamePawn(name='default_pawn', width=2, height=3, shapestring="100110"))
-        self.db_session.add(GameBoard(name='default_board', width=6, height=8, shapestring="0"*48))
+        self.db_session.add(GameBoard(name='default_board', width=6, height=8, shapestring="1"*48))
         self.db_session.flush()
         self.on_run = None
 
@@ -483,7 +483,7 @@ class GameManager:
         board_table = [[0 for j in range(random_game_board_raw.height)] for i in range(random_game_board_raw.width)]
         for i in range(random_game_board_raw.width):
             for j in range(random_game_board_raw.height):
-                if board_table2[i][j] == '0':
+                if board_table2[i][j] == 0:
                     board_table[i][j] = random.randint(1, 9)
 
         self.game_data[game_number] = GameData(player_1_client, player_2_client, board_table, board_table2,
