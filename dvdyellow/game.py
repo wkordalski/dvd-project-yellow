@@ -368,7 +368,7 @@ class Pawn:
         return self.data[x][y]
 
 
-class Transformation:
+class TransformablePawn:
     def __init__(self, pawn):
         self._rot = 0
         self._pawn = pawn
@@ -436,6 +436,9 @@ class Game:
         """
         return self.move_board[x][y], self.point_board[x][y]
 
+    def get_transformable_pawn(self):
+        return TransformablePawn(self.pawn)
+
     @property
     def is_finished(self):
         return self.result is not None
@@ -443,7 +446,13 @@ class Game:
     def is_active_player(self):
         return self.active_player == self.player_number and not self.is_finished
 
-    def move(self, point, transformation):
+    def move(self, point, pawn):
+        """
+        Makes move. It puts pawn (TransformablePawn) at specified point.
+        :param point: Where to put the pawn.
+        :param pawn: TransformablePawn to put.
+        :return: Query which result is if move command succeeded.
+        """
         if self.is_finished:
             raise AssertionError("The game was finished!")
         data = {
@@ -451,7 +460,7 @@ class Game:
             'game-nr': self.gid,
             'player-nr': self.player_number,
             'x': point[0], 'y': point[1],
-            'rotation': transformation.rotation
+            'rotation': pawn.rotation
         }
 
         def result_processor(r):
