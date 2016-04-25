@@ -502,7 +502,7 @@ class GameManager:
                                                          'game-board': self.game_data[self.counter].game_board_point,
                                                          'game-pawn': self.game_data[self.counter].game_pawn})
                 return_value = {'status': 'ok', 'game-status': 'found',
-                                'opponent-id': self.user_manager.get_users_client(self.random_one),
+                                'opponent-id': self.user_manager.get_clients_user(self.random_one),
                                 'game-nr': self.counter, 'player-number': 2,
                                 'game-board': self.game_data[self.counter].game_board_point,
                                 'game-pawn': self.game_data[self.counter].game_pawn}
