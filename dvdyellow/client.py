@@ -25,6 +25,8 @@ def przycisk(napis, x, y, minus_y, jasnosc, lenx=250, leny=60, fo=font, color=sf
 
 
 def stop_waiting(game):
+    print('Matched!')
+    global waiting
     waiting = 0
     global gra
     gra = game
@@ -78,6 +80,7 @@ def przeciwnik(gra):
 
 
 def main():
+    global gra, waiting
 
     w, h = sf.Vector2(800, 600)
     window = sf.RenderWindow(sf.VideoMode(w, h), "DVD Project Yellow Client")
@@ -255,9 +258,7 @@ def main():
                         actual = 5
                         wyjscie_z_menu(session)
                         gra = nowa_gra(session)
-                        if gra is None:
-                            waiting = 1
-                        else: waiting = 0
+                        waiting = 1 if gra is None else 0
                         print("WAITING")
                         print(waiting)
                     elif 20 <= x <= 270 and 200 <= y <= 260:
