@@ -593,11 +593,11 @@ class GameManager:
                 else:
                     self.server.notify(self.game_data[data['game-nr']].player_client[2 - data['player-nr']], 15,
                                        {'notification': 'game-finished', 'winner': 0, 'detail': 'no-more-moves',
-                                        'game-nr': data['game-nr'],'game_move_board': self.game_data[data['game-nr']].game_move_board,
+                                        'game-nr': data['game-nr'],'game_move_board': self.game_data[data['game-nr']].game_board_move,
                                         'player_1_points': player_1_score, 'player_2_points': player_2_score})
                     to_return = {'status': 'ok', 'game-status': 'finished', 'winner': 0, 'detail': 'no-more-moves',
                                  'game-nr': data['game-nr'], 'game_move_board': self.game_data[data['game-nr']].game_board_move,
-                                'player_1_points': player_1_score, 'player_2_points': player_2_score}
+                                 'player_1_points': player_1_score, 'player_2_points': player_2_score}
                     del self.game_data[data['game-nr']]
                     return to_return
             self.server.notify(self.game_data[data['game-nr']].player_client[2 - data['player-nr']], 15,
