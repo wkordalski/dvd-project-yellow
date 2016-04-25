@@ -399,7 +399,7 @@ class GameManager:
         for i in range(len(pawn)):
             for j in range(len(pawn[0])):
                 try:
-                    if pawn[x + i][y + j] == 1 and board[x][y] != 0:
+                    if pawn[i][j] == 1 and board[x + i][y + j] != 0:
                         return False
                 except IndexError:
                     return False
