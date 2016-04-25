@@ -529,7 +529,7 @@ class GameManager:
                 return {'status': 'error', 'code': 'BAD_GAME_PLAYER_NR'}
             self.server.notify(self.game_data[data['game-nr']].player_client[2 - data['player-nr']], 15,
                                {'notification': 'game-finished', 'result': 'won', 'detail': 'enemy-abandoned-game',
-                                'game-nr': data['game-nr']})
+                                'game-nr': data['game-nr'], 'winner': (2 - data['player-nr'])})
             del self.game_data[data['game-nr']]
             return {'status': 'ok', 'game-result': 'defeated', 'detail': 'game-abandoned'}
         elif data['command'] == 'quit-searching':
