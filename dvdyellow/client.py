@@ -7,6 +7,7 @@ data_directory = 'data'
 font = sf.Font.from_file(os.path.join(data_directory, "celtic.ttf"))
 font2 = sf.Font.from_file(os.path.join(data_directory, "arial.ttf"))
 gra = None
+figura = None
 waiting = 0
 
 # przycisk
@@ -29,6 +30,8 @@ def stop_waiting(game):
     waiting = 0
     global gra
     gra = game
+    global figura
+    figura = gra.get_transformable_pawn()
 
 
 def txt(x, y, color=sf.Color.BLACK, size=25, fo=font2, tek=""):
@@ -81,6 +84,7 @@ def przeciwnik(gra):
 def main():
     global gra
     global waiting
+    global figura
 
     w, h = sf.Vector2(800, 600)
     window = sf.RenderWindow(sf.VideoMode(w, h), "DVD Project Yellow Client")
@@ -259,7 +263,9 @@ def main():
                         gra = nowa_gra(session)
                         if gra is None:
                             waiting = 1
-                        else: waiting = 0
+                        else:
+                            waiting = 0
+                            figura = gra.get_transformable_pawn()
                         print("WAITING")
                         print(waiting)
                     elif 20 <= x <= 270 and 200 <= y <= 260:
@@ -326,11 +332,11 @@ def main():
                 elif actual in (1, 2) and event.code == sf.Keyboard.TAB:
                     chosen = (chosen + 1) % 3
                 elif actual == 5 and event.code == sf.Keyboard.RIGHT:
-                    gra.get_transformable_pawn().rotate_clockwise()
+                    figura.rotate_clockwise()
                 elif actual == 5 and event.code == sf.Keyboard.LEFT:
-                    gra.get_transformable_pawn().rotate_clockwise()
-                    gra.get_transformable_pawn().rotate_clockwise()
-                    gra.get_transformable_pawn().rotate_clockwise()
+                    figura.rotate_clockwise()
+                    figura.rotate_clockwise()
+                    figura.rotate_clockwise()
 
 
         if not window.is_open:
@@ -417,8 +423,8 @@ def main():
                 play2 = txt(20, 500, tek="Player2", size=42, fo=font, color=KOL2)
                 res2 = txt(20, 450, tek="69", size=42, fo=font, color=KOL2)
 
-                fig_y = gra.get_transformable_pawn().height
-                fig_x = gra.get_transformable_pawn().width
+                fig_y = figura.height
+                fig_x = figura.width
 
                 list_fig = []
                 czy_zielona = 1
@@ -440,7 +446,7 @@ def main():
                     while poz_x < gra.width:
                         if y < 50+(poz_y+1)*wym and y+(fig_y-1)*wym > 50+poz_y*wym and x < 250+(poz_x+1)*wym \
                                 and x+(fig_x-1)*wym > 250+poz_x*wym \
-                                and gra.get_transformable_pawn().get_pawn_point(floor((250-x)/wym +poz_x+1), floor((50-y)/wym +poz_y+1)) \
+                                and figura.get_pawn_point(floor((250-x)/wym +poz_x+1), floor((50-y)/wym +poz_y+1)) \
                                 and y+(fig_y-1)*wym <= 50 + gra.height * wym and y >= 50 \
                                 and x+(fig_x-1)*wym <= 250 + gra.width * wym and x >= 250:
                             if gra.get_field(poz_x, poz_y)[0] != 0:
