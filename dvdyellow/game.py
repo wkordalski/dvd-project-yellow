@@ -260,7 +260,7 @@ class Session:
         }
 
         def result_processor(r):
-            # zwraca None jeśli trzeba czekać lub zwraca grę
+            # returns None if you have to wait returns game
             if not check_result_ok(r) or 'game-status' not in r.response:
                 raise AssertionError("Server error - FIXIT")
             if r.response['game-status'] == 'waiting':
