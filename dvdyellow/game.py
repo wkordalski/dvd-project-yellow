@@ -175,6 +175,7 @@ class Session:
                     player_number=data['player-number'])
 
         self.games[game_id] = game
+        print(game.pawn)
         if self.on_game_found:
             self.on_game_found(game)
         return game
@@ -365,6 +366,8 @@ class Pawn:
         self.height = len(data[0])
 
     def get_pawn_point(self, x, y):
+        if x < 0 or x >= self.width or y < 0 or y >= self.height:
+            return True
         return self.data[x][y]
 
 
@@ -434,6 +437,8 @@ class Game:
         :param y: Y coordinate of the field.
         :return: Tuple containing who has the field and pointing information.
         """
+        if x < 0 or x >= self.width or y < 0 or y >= self.height:
+            return -3, 0
         return self.move_board[x][y], self.point_board[x][y]
 
     def get_transformable_pawn(self):

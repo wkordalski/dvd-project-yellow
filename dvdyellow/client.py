@@ -59,7 +59,7 @@ def wykonaj_ruch(gra, x, y):
 
 
 def nowa_gra(session):
-    return session.set_want_to_play()
+    return session.set_want_to_play().result
 
 
 def rezygnacja(session):
@@ -407,8 +407,8 @@ def main():
                 play2 = txt(20, 500, tek="Player2", size=42, fo=font, color=KOL2)
                 res2 = txt(20, 450, tek="69", size=42, fo=font, color=KOL2)
 
-                fig_y = gra.get_transformable_pawn().height()
-                fig_x = gra.get_transformable_pawn().width()
+                fig_y = gra.get_transformable_pawn().height
+                fig_x = gra.get_transformable_pawn().width
 
                 list_fig = []
                 czy_zielona = 1
@@ -430,7 +430,7 @@ def main():
                     while poz_x < gra.width:
                         if y < 50+(poz_y+1)*wym and y+(fig_y-1)*wym > 50+poz_y*wym and x < 250+(poz_x+1)*wym \
                                 and x+(fig_x-1)*wym > 250+poz_x*wym \
-                                and gra.get_transformable_pawn.get_pawn_point(floor((50-y)/wym +poz_y+1), floor((250-x)/wym +poz_x+1)) \
+                                and gra.get_transformable_pawn().get_pawn_point(floor((50-y)/wym +poz_y+1), floor((250-x)/wym +poz_x+1)) \
                                 and y+(fig_y-1)*wym <= 50 + gra.height * wym and y >= 50 \
                                 and x+(fig_x-1)*wym <= 250 + gra.width * wym and x >= 250:
                             if gra.get_field(poz_y, poz_x)[0] != 0:
