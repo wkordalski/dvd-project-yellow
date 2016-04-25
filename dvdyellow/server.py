@@ -31,7 +31,7 @@ class ServerManager:
         self.user_manager = UserManager(self.server, self.db_session)
         self.waiting_room = WaitingRoomManager(self)
         self.game_manager = GameManager(self.server, self.user_manager, self.db_session)
-        self.db_session.add(GamePawn(name='default_pawn', width=2, height=3, shapestring="100110"))
+        self.db_session.add(GamePawn(name='default_pawn', width=2, height=3, shapestring="110110"))
         self.db_session.add(GameBoard(name='default_board', width=6, height=8, shapestring="0"*48))
         self.db_session.flush()
         self.on_run = None
