@@ -527,9 +527,18 @@ class GameManager:
                 return {'status': 'error', 'code': 'NO_PLAYER'}
             elif self.game_data[data['game-nr']].player_client[data['player-nr'] - 1] != client_id:
                 return {'status': 'error', 'code': 'BAD_GAME_PLAYER_NR'}
+            player_1_score = 0
+            player_2_score = 0
+            for i in range(len(self.game_data[data['game-nr']].game_board_move)):
+                for j in range(len(self.game_data[data['game-nr']].game_board_move[0])):
+                    if self.game_data[data['game-nr']].game_board_move[i][j] == -1:
+                        player_1_score += self.game_data[data['game-nr']].game_board_point[i][j]
+                    elif self.game_data[data['game-nr']].game_board_move[i][j] == -2:
+                        player_2_score += self.game_data[data['game-nr']].game_board_point[i][j]
             self.server.notify(self.game_data[data['game-nr']].player_client[2 - data['player-nr']], 15,
-                               {'notification': 'game-finished', 'result': 'won', 'detail': 'enemy-abandoned-game',
-                                'game-nr': data['game-nr'], 'winner': (2 - data['player-nr'])})
+                              {'notification': 'game-finished', 'winner': 3 - data['player-nr'], 'detail': 'enemy-abandoned-game',
+                               'game-nr': data['game-nr'], 'game_move_board': self.game_data[data['game-nr']].game_board_move,
+                               'player_points': [player_1_score, player_2_score]})
             del self.game_data[data['game-nr']]
             return {'status': 'ok', 'game-result': 'defeated', 'detail': 'game-abandoned'}
         elif data['command'] == 'quit-searching':
