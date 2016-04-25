@@ -551,7 +551,7 @@ class GameManager:
             self.game_data[data['game-nr']].current_player = 3 - data['player-nr']
             self._print_move(temp_pawn, data['x'], data['y'], self.game_data[data['game-nr']].moveboard,
                              data['player-nr'])
-            self._transform_after_move(temp_pawn, self.game_data[data['game-nr']], -data['player-nr'])
+            self._transform_after_move(temp_pawn, self.game_data[data['game-nr']].game_board_move, -data['player-nr'])
             player_1_score = 0
             player_2_score = 0
             is_it_end = True
