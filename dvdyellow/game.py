@@ -370,7 +370,7 @@ class Pawn:
 
 class Transformation:
     def __init__(self, pawn):
-        self._rot = 0\
+        self._rot = 0
         self._pawn = pawn
         pass
 
