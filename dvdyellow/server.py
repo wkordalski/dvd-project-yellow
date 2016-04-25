@@ -546,7 +546,7 @@ class GameManager:
             temp_pawn = self.game_data[data['game-nr']].game_pawn
             for i in range(data['rotation']):
                 temp_pawn = self._clockwised_pawn(temp_pawn)
-            if self._check_move(data['x'], data['y'], self.game_data[data['game-nr']].game_board_move, temp_pawn):
+            if not self._check_move(data['x'], data['y'], self.game_data[data['game-nr']].game_board_move, temp_pawn):
                 return {'status': 'error', 'code': 'WRONG_MOVE'}
             self.game_data[data['game-nr']].current_player = 3 - data['player-nr']
             self._print_move(temp_pawn, data['x'], data['y'], self.game_data[data['game-nr']].moveboard,
