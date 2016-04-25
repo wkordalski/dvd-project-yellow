@@ -25,7 +25,6 @@ def przycisk(napis, x, y, minus_y, jasnosc, lenx=250, leny=60, fo=font, color=sf
 
 
 def stop_waiting(game):
-    print('Matched!')
     global waiting
     waiting = 0
     global gra
@@ -80,7 +79,8 @@ def przeciwnik(gra):
 
 
 def main():
-    global gra, waiting
+    global gra
+    global waiting
 
     w, h = sf.Vector2(800, 600)
     window = sf.RenderWindow(sf.VideoMode(w, h), "DVD Project Yellow Client")
@@ -175,7 +175,6 @@ def main():
         for event in window.events:
             if event == sf.MouseMoveEvent:
                 x, y = event.position
-                print(x, y)
 
             if event == sf.CloseEvent:
                 if actual == 4:
@@ -258,7 +257,9 @@ def main():
                         actual = 5
                         wyjscie_z_menu(session)
                         gra = nowa_gra(session)
-                        waiting = 1 if gra is None else 0
+                        if gra is None:
+                            waiting = 1
+                        else: waiting = 0
                         print("WAITING")
                         print(waiting)
                     elif 20 <= x <= 270 and 200 <= y <= 260:
@@ -439,32 +440,32 @@ def main():
                     while poz_x < gra.width:
                         if y < 50+(poz_y+1)*wym and y+(fig_y-1)*wym > 50+poz_y*wym and x < 250+(poz_x+1)*wym \
                                 and x+(fig_x-1)*wym > 250+poz_x*wym \
-                                and gra.get_transformable_pawn().get_pawn_point(floor((50-y)/wym +poz_y+1), floor((250-x)/wym +poz_x+1)) \
+                                and gra.get_transformable_pawn().get_pawn_point(floor((250-x)/wym +poz_x+1), floor((50-y)/wym +poz_y+1)) \
                                 and y+(fig_y-1)*wym <= 50 + gra.height * wym and y >= 50 \
                                 and x+(fig_x-1)*wym <= 250 + gra.width * wym and x >= 250:
-                            if gra.get_field(poz_y, poz_x)[0] != 0:
+                            if gra.get_field(poz_x, poz_y)[0] != 0:
                                 czy_zielona = 0
                             list_fig.append((250+poz_x*(wym-1), 50+poz_y*(wym-1)))
-                        elif gra.get_field(poz_y, poz_x)[0] == 0:
+                        elif gra.get_field(poz_x, poz_y)[0] == 0:
                             kwadrat.color = sf.Color(255,255,255,255)
-                        elif gra.get_field(poz_y, poz_x)[0] == 1:
+                        elif gra.get_field(poz_x, poz_y)[0] == 1:
                             kwadrat.color = KOL1
-                        elif gra.get_field(poz_y, poz_x)[0] == -1:
+                        elif gra.get_field(poz_x, poz_y)[0] == -1:
                             kwadrat.color = KOL1b
-                        elif gra.get_field(poz_y, poz_x)[0] == 2:
+                        elif gra.get_field(poz_x, poz_y)[0] == 2:
                             kwadrat.color = KOL2
-                        elif gra.get_field(poz_y, poz_x)[0] == -2:
+                        elif gra.get_field(poz_x, poz_y)[0] == -2:
                             kwadrat.color = KOL2b
-                        elif gra.get_field(poz_y, poz_x)[0] == -3:
+                        elif gra.get_field(poz_x, poz_y)[0] == -3:
                             kwadrat.color = sf.Color(255, 255, 255, 0)
 
                         kwadrat.position = sf.Vector2(250+poz_x*(wym-1), 50+poz_y*(wym-1))
                         window.draw(kwadrat)
-                        if gra.get_field(poz_y, poz_x)[1] < 0:
-                            numerek = txt(250+poz_x*(wym-1)+wym/8, 50+poz_y*(wym-1), tek=str(gra.get_field(poz_y, poz_x)[1]), size=wym*3/5)
+                        if gra.get_field(poz_x, poz_y)[1] < 0:
+                            numerek = txt(250+poz_x*(wym-1)+wym/8, 50+poz_y*(wym-1), tek=str(gra.get_field(poz_x, poz_y)[1]), size=wym*3/5)
                         else:
-                            numerek = txt(250+poz_x*(wym-1)+wym/5, 50+poz_y*(wym-1), tek=str(gra.get_field(poz_y, poz_x)[1]), size=wym*3/5)
-                        if gra.get_field(poz_y, poz_x)[0] != -3:
+                            numerek = txt(250+poz_x*(wym-1)+wym/5, 50+poz_y*(wym-1), tek=str(gra.get_field(poz_x, poz_y)[1]), size=wym*3/5)
+                        if gra.get_field(poz_x, poz_y)[0] != -3:
                             window.draw(numerek)
                         poz_x += 1
                     poz_y += 1
