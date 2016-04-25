@@ -1,0 +1,288 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!-- saved from url=(0042)http://localhost:44916/dvdyellow.game.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>Pydoc: module dvdyellow.game</title>
+
+<link rel="stylesheet" type="text/css" href="./Pydoc_ module dvdyellow.game_files/_pydoc.css"></head><body bgcolor="#f0f0f8">
+            <div style="float:left">
+                Python 3.4.3 [default, GCC 4.8.4]<br>Linux-3.13.0-85-generic-x86_64-with-glibc2.9
+            </div>
+            <div style="float:right">
+                <div style="text-align:center">
+                  <a href="http://localhost:44916/index.html">Module Index</a>
+                  : <a href="http://localhost:44916/topics.html">Topics</a>
+                  : <a href="http://localhost:44916/keywords.html">Keywords</a>
+                </div>
+                <div>
+                    <form action="http://localhost:44916/get" style="display:inline;">
+                      <input type="text" name="key" size="15">
+                      <input type="submit" value="Get">
+                    </form>&nbsp;
+                    <form action="http://localhost:44916/search" style="display:inline;">
+                      <input type="text" name="key" size="15">
+                      <input type="submit" value="Search">
+                    </form>
+                </div>
+            </div>
+            <div style="clear:both;padding-top:.5em;">
+<table width="100%" cellspacing="0" cellpadding="2" border="0" summary="heading">
+<tbody><tr bgcolor="#7799ee">
+<td valign="bottom">&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial">&nbsp;<br><big><big><strong><a href="http://localhost:44916/dvdyellow.html"><font color="#ffffff">dvdyellow</font></a>.game</strong></big></big></font></td><td align="right" valign="bottom"><font color="#ffffff" face="helvetica, arial"><a href="http://localhost:44916/">index</a><br></font></td></tr></tbody></table>
+    <p><tt>Here&nbsp;would&nbsp;be&nbsp;objects&nbsp;that&nbsp;client&nbsp;will&nbsp;use&nbsp;to&nbsp;play&nbsp;the&nbsp;game.<br>
+&nbsp;<br>
+So&nbsp;classes&nbsp;like&nbsp;<a href="http://localhost:44916/dvdyellow.game.html#Board">Board</a>,&nbsp;<a href="http://localhost:44916/dvdyellow.game.html#WaitingRoom">WaitingRoom</a>&nbsp;(from&nbsp;Client&nbsp;<a href="http://localhost:44916/dvdyellow.game.html#Game">Game</a>&nbsp;Interface)<br>
+will&nbsp;be&nbsp;here&nbsp;implemented.</tt></p>
+<p>
+<table width="100%" cellspacing="0" cellpadding="2" border="0" summary="section">
+<tbody><tr bgcolor="#ee77aa">
+<td colspan="3" valign="bottom">&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Classes</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#ee77aa"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl>
+<dt><font face="helvetica, arial"><a href="http://localhost:44916/builtins.html#object">builtins.object</a>
+</font></dt><dd>
+<dl>
+<dt><font face="helvetica, arial"><a href="http://localhost:44916/dvdyellow.game.html#AsyncQuery">AsyncQuery</a>
+</font></dt><dt><font face="helvetica, arial"><a href="http://localhost:44916/dvdyellow.game.html#AsyncQueryChain">AsyncQueryChain</a>
+</font></dt><dt><font face="helvetica, arial"><a href="http://localhost:44916/dvdyellow.game.html#Board">Board</a>
+</font></dt><dt><font face="helvetica, arial"><a href="http://localhost:44916/dvdyellow.game.html#Game">Game</a>
+</font></dt><dt><font face="helvetica, arial"><a href="http://localhost:44916/dvdyellow.game.html#Pawn">Pawn</a>
+</font></dt><dt><font face="helvetica, arial"><a href="http://localhost:44916/dvdyellow.game.html#Session">Session</a>
+</font></dt><dt><font face="helvetica, arial"><a href="http://localhost:44916/dvdyellow.game.html#Transformation">Transformation</a>
+</font></dt><dt><font face="helvetica, arial"><a href="http://localhost:44916/dvdyellow.game.html#User">User</a>
+</font></dt><dt><font face="helvetica, arial"><a href="http://localhost:44916/dvdyellow.game.html#WaitingRoom">WaitingRoom</a>
+</font></dt></dl>
+</dd>
+</dl>
+ <p>
+<table width="100%" cellspacing="0" cellpadding="2" border="0" summary="section">
+<tbody><tr bgcolor="#ffc8d8">
+<td colspan="3" valign="bottom">&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="AsyncQuery">class <strong>AsyncQuery</strong></a>(<a href="http://localhost:44916/builtins.html#object">builtins.object</a>)</font></td></tr>
+    
+<tr><td bgcolor="#ffc8d8"><tt>&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="AsyncQuery-__init__"><strong>__init__</strong></a>(self, function, checker, result_getter)</dt></dl>
+
+<dl><dt><a name="AsyncQuery-run"><strong>run</strong></a>(self, *args, **kwargs)</dt></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>ready</strong></dt>
+</dl>
+<dl><dt><strong>result</strong></dt>
+</dl>
+</td></tr></tbody></table> </p><p>
+<table width="100%" cellspacing="0" cellpadding="2" border="0" summary="section">
+<tbody><tr bgcolor="#ffc8d8">
+<td colspan="3" valign="bottom">&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="AsyncQueryChain">class <strong>AsyncQueryChain</strong></a>(<a href="http://localhost:44916/builtins.html#object">builtins.object</a>)</font></td></tr>
+    
+<tr><td bgcolor="#ffc8d8"><tt>&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="AsyncQueryChain-__init__"><strong>__init__</strong></a>(self, query, *args)</dt></dl>
+
+<dl><dt><a name="AsyncQueryChain-run"><strong>run</strong></a>(self)</dt></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>all_results</strong></dt>
+</dl>
+<dl><dt><strong>ready</strong></dt>
+</dl>
+<dl><dt><strong>result</strong></dt>
+</dl>
+</td></tr></tbody></table> </p><p>
+<table width="100%" cellspacing="0" cellpadding="2" border="0" summary="section">
+<tbody><tr bgcolor="#ffc8d8">
+<td colspan="3" valign="bottom">&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="Board">class <strong>Board</strong></a>(<a href="http://localhost:44916/builtins.html#object">builtins.object</a>)</font></td></tr>
+    
+<tr><td bgcolor="#ffc8d8"><tt>&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="Board-__init__"><strong>__init__</strong></a>(self, session, data)</dt></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+</td></tr></tbody></table> </p><p>
+<table width="100%" cellspacing="0" cellpadding="2" border="0" summary="section">
+<tbody><tr bgcolor="#ffc8d8">
+<td colspan="3" valign="bottom">&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="Game">class <strong>Game</strong></a>(<a href="http://localhost:44916/builtins.html#object">builtins.object</a>)</font></td></tr>
+    
+<tr><td bgcolor="#ffc8d8"><tt>&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="Game-__init__"><strong>__init__</strong></a>(self, session, gid, player_number, opponent, pawn, board)</dt></dl>
+
+<dl><dt><a name="Game-abandon"><strong>abandon</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="Game-get_active_player"><strong>get_active_player</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="Game-move"><strong>move</strong></a>(self, point, transformation)</dt></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+</td></tr></tbody></table> </p><p>
+<table width="100%" cellspacing="0" cellpadding="2" border="0" summary="section">
+<tbody><tr bgcolor="#ffc8d8">
+<td colspan="3" valign="bottom">&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="Pawn">class <strong>Pawn</strong></a>(<a href="http://localhost:44916/builtins.html#object">builtins.object</a>)</font></td></tr>
+    
+<tr><td bgcolor="#ffc8d8"><tt>&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="Pawn-__init__"><strong>__init__</strong></a>(self, session, data)</dt></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+</td></tr></tbody></table> </p><p>
+<table width="100%" cellspacing="0" cellpadding="2" border="0" summary="section">
+<tbody><tr bgcolor="#ffc8d8">
+<td colspan="3" valign="bottom">&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="Session">class <strong>Session</strong></a>(<a href="http://localhost:44916/builtins.html#object">builtins.object</a>)</font></td></tr>
+    
+<tr><td bgcolor="#ffc8d8"><tt>&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="Session-__init__"><strong>__init__</strong></a>(self, client)</dt></dl>
+
+<dl><dt><a name="Session-cancel_want_to_play"><strong>cancel_want_to_play</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="Session-del_waiting_room"><strong>del_waiting_room</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="Session-get_signed_in_user"><strong>get_signed_in_user</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="Session-get_waiting_room"><strong>get_waiting_room</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="Session-process_events"><strong>process_events</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="Session-set_want_to_play"><strong>set_want_to_play</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="Session-sign_in"><strong>sign_in</strong></a>(self, login, password)</dt></dl>
+
+<dl><dt><a name="Session-sign_out"><strong>sign_out</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="Session-sign_up"><strong>sign_up</strong></a>(self, login, password)</dt></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+</td></tr></tbody></table> </p><p>
+<table width="100%" cellspacing="0" cellpadding="2" border="0" summary="section">
+<tbody><tr bgcolor="#ffc8d8">
+<td colspan="3" valign="bottom">&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="Transformation">class <strong>Transformation</strong></a>(<a href="http://localhost:44916/builtins.html#object">builtins.object</a>)</font></td></tr>
+    
+<tr><td bgcolor="#ffc8d8"><tt>&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="Transformation-__init__"><strong>__init__</strong></a>(self, pawn)</dt></dl>
+
+<dl><dt><a name="Transformation-rotate_clockwise"><strong>rotate_clockwise</strong></a>(self)</dt></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+</td></tr></tbody></table> </p><p>
+<table width="100%" cellspacing="0" cellpadding="2" border="0" summary="section">
+<tbody><tr bgcolor="#ffc8d8">
+<td colspan="3" valign="bottom">&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="User">class <strong>User</strong></a>(<a href="http://localhost:44916/builtins.html#object">builtins.object</a>)</font></td></tr>
+    
+<tr><td bgcolor="#ffc8d8"><tt>&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="User-__init__"><strong>__init__</strong></a>(self, session, user_id)</dt></dl>
+
+<dl><dt><a name="User-get_status"><strong>get_status</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="User-set_status"><strong>set_status</strong></a>(self, status)</dt></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>id</strong></dt>
+</dl>
+<dl><dt><strong>name</strong></dt>
+</dl>
+</td></tr></tbody></table> </p><p>
+<table width="100%" cellspacing="0" cellpadding="2" border="0" summary="section">
+<tbody><tr bgcolor="#ffc8d8">
+<td colspan="3" valign="bottom">&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="WaitingRoom">class <strong>WaitingRoom</strong></a>(<a href="http://localhost:44916/builtins.html#object">builtins.object</a>)</font></td></tr>
+    
+<tr><td bgcolor="#ffc8d8"><tt>&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="WaitingRoom-__init__"><strong>__init__</strong></a>(self, session)</dt></dl>
+
+<dl><dt><a name="WaitingRoom-get_online_users"><strong>get_online_users</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="WaitingRoom-get_status_by_user"><strong>get_status_by_user</strong></a>(self, user)</dt></dl>
+
+<dl><dt><a name="WaitingRoom-on_change_status"><strong>on_change_status</strong></a>(self, channel, data)</dt></dl>
+
+<dl><dt><a name="WaitingRoom-set_status_by_user"><strong>set_status_by_user</strong></a>(self, user, status)</dt></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+</td></tr></tbody></table></p></td></tr></tbody></table></p><p>
+<table width="100%" cellspacing="0" cellpadding="2" border="0" summary="section">
+<tbody><tr bgcolor="#eeaa77">
+<td colspan="3" valign="bottom">&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Functions</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#eeaa77"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl><dt><a name="-check_result_ok"><strong>check_result_ok</strong></a>(query)</dt></dl>
+ <dl><dt><a name="-make_session"><strong>make_session</strong></a>(address, port=42371)</dt></dl>
+ <dl><dt><a name="-milliseconds"><strong>milliseconds</strong></a>(...)</dt></dl>
+ <dl><dt><a name="-sleep"><strong>sleep</strong></a>(...)</dt></dl>
+</td></tr></tbody></table></p></div>
+</body></html>
