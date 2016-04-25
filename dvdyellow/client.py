@@ -163,6 +163,7 @@ def main():
     logg = txt(275, 200)
     pas = txt(275, 300)
     password = ""
+    moj_login = ""
 
     chosen = 0  # 1-login, 2-password
     actual = 0  # 0-page0, 1-logowanie, 2-rejestracja, 3-gra lokalna, 4-menu główne, 5-gra
@@ -211,6 +212,7 @@ def main():
                         if logowanie(session, logg.string, password):
                             actual = 4
                             logerror = 0
+                            moj_login = logg.string
                             logg.string = ""
                             pas.string = ""
                             password = ""
@@ -279,6 +281,7 @@ def main():
                     elif 20 <= x <= 270 and 520 <= y <= 580:
                         wyjscie_z_menu(session)
                         wylogowywanie(session)
+                        moj_login = ""
                         actual = 0
                         option = 0
                     else:
@@ -289,6 +292,11 @@ def main():
                     if 20 <= x <= 200 and 20 <= y <= 80:
                         actual = 4
                         gra.abandon().result
+                    if not gra is None and gra.is_active_player():
+                        xx = int((x - 250) / (wym - 1))
+                        yy = int((y - 50) / (wym - 1))
+                        if xx >= 0 and yy >= 0 and xx <= 5 and yy <= 4:
+                            wykonaj_ruch(gra, xx, yy)
 
 
             # ZABAWY KLAWIATURĄ
@@ -418,9 +426,9 @@ def main():
                 KOL2 = sf.Color(64, 32, 192, 255)
                 KOL2b = sf.Color(64, 32, 192, 150)
 
-                play1 = txt(20, 80, tek="Player1", size=42, fo=font, color=KOL1)
+                play1 = txt(20, 80, tek=moj_login, size=42, fo=font, color=KOL1)
                 res1 = txt(20, 130, tek="42", size=42, fo=font, color=KOL1)
-                play2 = txt(20, 500, tek="Player2", size=42, fo=font, color=KOL2)
+                play2 = txt(20, 500, tek=przeciwnik(gra), size=42, fo=font, color=KOL2)
                 res2 = txt(20, 450, tek="69", size=42, fo=font, color=KOL2)
 
                 fig_y = figura.height
