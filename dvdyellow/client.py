@@ -247,9 +247,11 @@ def main():
                         actual = 5
                         wyjscie_z_menu(session)
                         gra = nowa_gra(session)
-                        if gra == None:
+                        if gra is None:
                             waiting = 1
                         else: waiting = 0
+                        print("WAITING")
+                        print(waiting)
                     elif 20 <= x <= 270 and 200 <= y <= 260:
                         option = 1
                     elif 20 <= x <= 270 and 280 <= y <= 340:
