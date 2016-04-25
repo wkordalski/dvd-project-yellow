@@ -274,6 +274,9 @@ class UserManager:
 
 
 class WaitingRoomManager:
+    """
+    Manages players' status
+    """
     def __init__(self, server_manager : ServerManager):
         """
         Creates waiting room manager.
@@ -500,11 +503,13 @@ class GameManager:
                                                          'opponent-id': self.user_manager.get_clients_user(client_id),
                                                          'game-nr': self.counter, 'player-number': 1,
                                                          'game-board': self.game_data[self.counter].game_board_point,
+                                                         'game-board-move': self.game_data[self.counter].game_board_move,
                                                          'game-pawn': self.game_data[self.counter].game_pawn})
                 return_value = {'status': 'ok', 'game-status': 'found',
                                 'opponent-id': self.user_manager.get_clients_user(self.random_one),
                                 'game-nr': self.counter, 'player-number': 2,
                                 'game-board': self.game_data[self.counter].game_board_point,
+                                'game-board-move': self.game_data[self.counter].game_board_move,
                                 'game-pawn': self.game_data[self.counter].game_pawn}
                 self.random_one = None
                 return return_value
@@ -590,7 +595,8 @@ class GameManager:
                 else:
                     self.server.notify(self.game_data[data['game-nr']].player_client[2 - data['player-nr']], 15,
                                        {'notification': 'game-finished', 'winner': 0, 'detail': 'no-more-moves',
-                                        'game-nr': data['game-nr']})
+                                        'game-nr': data['game-nr'],'game_move_board': self.game_data[data['game-nr']].game_board_move,
+                                        'player_1_points': player_1_score, 'player_2_points': player_2_score})
                     to_return = {'status': 'ok', 'game-status': 'finished', 'winner': 0, 'detail': 'no-more-moves',
                                  'game-nr': data['game-nr'], 'game_move_board': self.game_data[data['game-nr']].game_board_move,
                                  'player_points': [player_1_score, player_2_score]}
