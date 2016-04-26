@@ -429,9 +429,9 @@ def main():
                 KOL2b = sf.Color(64, 32, 192, 150)
 
                 play1 = txt(20, 80, tek=moj_login, size=42, fo=font, color=KOL1)
-                res1 = txt(20, 130, tek="42", size=42, fo=font, color=KOL1)
+                res1 = txt(20, 130, tek=str(gra.player_points[gra.player_number-1]), size=42, fo=font, color=KOL1)
                 play2 = txt(20, 500, tek=przeciwnik(), size=42, fo=font, color=KOL2)
-                res2 = txt(20, 450, tek="69", size=42, fo=font, color=KOL2)
+                res2 = txt(20, 450, tek=str(gra.player_points[2-gra.player_number]), size=42, fo=font, color=KOL2)
 
                 fig_y = figura.height
                 fig_x = figura.width
