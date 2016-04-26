@@ -65,7 +65,7 @@ def wyjscie_z_menu(session):
     session.del_waiting_room().result
 
 
-def wykonaj_ruch(gra, x, y):
+def wykonaj_ruch(x, y):
     gra.move((x, y), gra.get_transformable_pawn())
 
 
@@ -77,7 +77,7 @@ def rezygnacja(session):
     session.cancel_want_to_play().result
 
 
-def przeciwnik(gra):
+def przeciwnik():
     return gra.opponent.name.result
 
 
@@ -182,9 +182,11 @@ def main():
                 x, y = event.position
 
             if event == sf.CloseEvent:
-                if actual == 4:
-                    wyjscie_z_menu(session)
                 if actual in (4, 5):
+                    if actual == 4:
+                        wyjscie_z_menu(session)
+                    else:
+                        gra.abandon().result
                     wylogowywanie(session)
                 window.close()
 
@@ -292,11 +294,11 @@ def main():
                     if 20 <= x <= 200 and 20 <= y <= 80:
                         actual = 4
                         gra.abandon().result
-                    if not gra is None and gra.is_active_player():
+                    if gra is not None:
                         xx = int((x - 250) / (wym - 1))
                         yy = int((y - 50) / (wym - 1))
                         if xx >= 0 and yy >= 0 and xx <= 5 and yy <= 4:
-                            wykonaj_ruch(gra, xx, yy)
+                            wykonaj_ruch(xx, yy)
 
 
             # ZABAWY KLAWIATURĄ
@@ -428,7 +430,7 @@ def main():
 
                 play1 = txt(20, 80, tek=moj_login, size=42, fo=font, color=KOL1)
                 res1 = txt(20, 130, tek="42", size=42, fo=font, color=KOL1)
-                play2 = txt(20, 500, tek=przeciwnik(gra), size=42, fo=font, color=KOL2)
+                play2 = txt(20, 500, tek=przeciwnik(), size=42, fo=font, color=KOL2)
                 res2 = txt(20, 450, tek="69", size=42, fo=font, color=KOL2)
 
                 fig_y = figura.height
@@ -460,7 +462,7 @@ def main():
                             if gra.get_field(poz_x, poz_y)[0] != 0:
                                 czy_zielona = 0
                             list_fig.append((250+poz_x*(wym-1), 50+poz_y*(wym-1)))
-                        elif gra.get_field(poz_x, poz_y)[0] == 0:
+                        if gra.get_field(poz_x, poz_y)[0] == 0:
                             kwadrat.color = sf.Color(255,255,255,255)
                         elif gra.get_field(poz_x, poz_y)[0] == 1:
                             kwadrat.color = KOL1
@@ -484,14 +486,13 @@ def main():
                         poz_x += 1
                     poz_y += 1
 
-                if gra.is_active_player():
-                    for poz in list_fig:
-                        if czy_zielona:
-                            kwadrat.color = sf.Color.GREEN
-                        else:
-                            kwadrat.color = sf.Color.RED
-                        kwadrat.position = sf.Vector2(poz[0], poz[1])
-                        window.draw(kwadrat)
+                for poz in list_fig:
+                    if czy_zielona:
+                        kwadrat.color = sf.Color.GREEN
+                    else:
+                        kwadrat.color = sf.Color.RED
+                    kwadrat.position = sf.Vector2(poz[0], poz[1])
+                    window.draw(kwadrat)
 
                 window.draw(play1)
                 window.draw(play2)
