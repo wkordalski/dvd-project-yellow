@@ -31,7 +31,7 @@ class ServerManager:
         self.user_manager = UserManager(self.server, self.db_session)
         self.waiting_room = WaitingRoomManager(self)
         self.game_manager = GameManager(self.server, self.user_manager, self.db_session)
-        self.db_session.add(GamePawn(name='default_pawn', width=2, height=3, shapestring="110110"))
+        self.db_session.add(GamePawn(name='default_pawn', width=2, height=2, shapestring="1111"))
         self.db_session.add(GameBoard(name='default_board', width=6, height=8, shapestring="1"*48))
         self.db_session.flush()
         self.on_run = None
@@ -559,13 +559,14 @@ class GameManager:
                 return {'status': 'error', 'code': 'WRONG_TURN'}
             elif 'x' not in data or 'y' not in data or 'rotation' not in data:
                 return {'status': 'error', 'code': 'NO_MOVE'}
+            print(data['rotation'])
             temp_pawn = self.game_data[data['game-nr']].game_pawn
             for i in range(data['rotation']):
                 temp_pawn = self._clockwised_pawn(temp_pawn)
             if not self._check_move(data['x'], data['y'], self.game_data[data['game-nr']].game_board_move, temp_pawn):
                 return {'status': 'error', 'code': 'WRONG_MOVE'}
             self.game_data[data['game-nr']].current_player = 3 - data['player-nr']
-            self._print_move(temp_pawn, data['x'], data['y'], self.game_data[data['game-nr']].moveboard,
+            self._print_move(temp_pawn, data['x'], data['y'], self.game_data[data['game-nr']].game_board_move,
                              data['player-nr'])
             self._transform_after_move(temp_pawn, self.game_data[data['game-nr']].game_board_move, -data['player-nr'])
             player_1_score = 0
@@ -614,6 +615,11 @@ class GameManager:
                     del self.game_data[data['game-nr']]
                     return to_return
             self.server.notify(self.game_data[data['game-nr']].player_client[2 - data['player-nr']], 15,
+                               {'notification': 'your-new-turn',
+                                'game-nr': data['game-nr'],
+                                'game_move_board': self.game_data[data['game-nr']].game_board_move,
+                                'player_points': [player_1_score, player_2_score]})
+            self.server.notify(self.game_data[data['game-nr']].player_client[data['player-nr'] - 1], 15,
                                {'notification': 'your-new-turn',
                                 'game-nr': data['game-nr'],
                                 'game_move_board': self.game_data[data['game-nr']].game_board_move,
