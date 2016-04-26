@@ -132,7 +132,7 @@ def main():
     lazy.position = 160, 200
 
     # Nazwa gry
-    game = sf.Text("Nazwa gry")
+    game = sf.Text("Domination")
     game.font = font
     game.character_size = 100
     game.color = GREY
