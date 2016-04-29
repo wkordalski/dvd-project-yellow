@@ -548,16 +548,22 @@ class GameManager:
             return {'status': 'ok'}
         elif data['command'] == 'move':
             if 'game-nr' not in data:
+                print("no_game_nr")
                 return {'status': 'error', 'code': 'NO_GAME_NR'}
             elif data['game-nr'] not in self.game_data:
+                print("bad_game_nr")
                 return {'status': 'error', 'code': 'BAD_GAME_NR'}
             elif 'player-nr' not in data:
+                print("no_player_nr")
                 return {'status': 'error', 'code': 'NO_PLAYER'}
             elif self.game_data[data['game-nr']].player_client[data['player-nr'] - 1] != client_id:
+                print("bad_game_player_nr")
                 return {'status': 'error', 'code': 'BAD_GAME_PLAYER_NR'}
             elif data['player-nr'] != self.game_data[data['game-nr']].current_player:
+                print("Wrong_turn")
                 return {'status': 'error', 'code': 'WRONG_TURN'}
             elif 'x' not in data or 'y' not in data or 'rotation' not in data:
+                print("No_move")
                 return {'status': 'error', 'code': 'NO_MOVE'}
             print(data['rotation'])
             temp_pawn = self.game_data[data['game-nr']].game_pawn
