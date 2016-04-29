@@ -618,12 +618,8 @@ class GameManager:
                                 'game-nr': data['game-nr'],
                                 'game_move_board': self.game_data[data['game-nr']].game_board_move,
                                 'player_points': [player_1_score, player_2_score]})
-            self.server.notify(self.game_data[data['game-nr']].player_client[data['player-nr'] - 1], 15,
-                               {'notification': 'your-new-turn',
-                                'game-nr': data['game-nr'],
-                                'game_move_board': self.game_data[data['game-nr']].game_board_move,
-                                'player_points': [player_1_score, player_2_score]})
-            return {'status': 'ok', 'game-status': 'opponents-turn', 'game_move_board': self.game_data[data['game-nr']].game_board_move,
+            return {'status': 'ok', 'game-status': 'opponents-turn',
+                    'game_move_board': self.game_data[data['game-nr']].game_board_move,
                     'player_points': [player_1_score, player_2_score]}
 
         return {'status': 'error', 'code': 'INVALID_COMMAND'}

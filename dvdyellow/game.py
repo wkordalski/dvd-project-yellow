@@ -470,11 +470,13 @@ class Game:
         }
 
         def result_processor(r):
+            print(r.response)
             if r and r.response.get('status') == 'ok':
-                if r.response.get('game-status') == 'opponent-turn':
+                data = r.response
+                if data.get('game-status') == 'opponents-turn':
                     self.player_points = data['player_points']
                     self.move_board = data.get('game_move_board')   # TODO - operator [] zamiast get
-                elif r.response.get('game-status') == 'game-finished':
+                elif data.get('game-status') == 'game-finished':
                     # game finished
                     if data['winner'] == 0:
                         self.result = 'draw'
