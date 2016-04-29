@@ -65,8 +65,8 @@ def wyjscie_z_menu(session):
     session.del_waiting_room().result
 
 
-def wykonaj_ruch(x, y):
-    gra.move((x, y), gra.get_transformable_pawn())
+def wykonaj_ruch(x, y, pawn):
+    gra.move((x, y), pawn).result
 
 
 def nowa_gra(session):
@@ -297,8 +297,8 @@ def main():
                     if gra is not None:
                         xx = int((x - 250) / (wym - 1))
                         yy = int((y - 50) / (wym - 1))
-                        if xx >= 0 and yy >= 0 and xx <= 5 and yy <= 4:
-                            wykonaj_ruch(xx, yy)
+                        if xx >= 0 and yy >= 0 and xx <= gra.width - figura.width and yy <= gra.height - figura.height:
+                            wykonaj_ruch(xx, yy, figura)
 
 
             # ZABAWY KLAWIATURĄ

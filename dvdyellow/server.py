@@ -31,7 +31,7 @@ class ServerManager:
         self.user_manager = UserManager(self.server, self.db_session)
         self.waiting_room = WaitingRoomManager(self)
         self.game_manager = GameManager(self.server, self.user_manager, self.db_session)
-        self.db_session.add(GamePawn(name='default_pawn', width=2, height=2, shapestring="1111"))
+        self.db_session.add(GamePawn(name='default_pawn', width=2, height=3, shapestring="101110"))
         self.db_session.add(GameBoard(name='default_board', width=6, height=8, shapestring="1"*48))
         self.db_session.flush()
         self.on_run = None
@@ -405,7 +405,7 @@ class GameManager:
                     return False
         return True
 
-    def _clockwised_pawn(self, pawn):
+    def _counter_clockwised_pawn(self, pawn):
         """
         :param pawn: pawn to be rotated
         :return: rotated pawn
@@ -445,7 +445,7 @@ class GameManager:
                 if move_board[i][j] != 0:
                     new_board[i][j] = 0
         for k in range(4):
-            temp_pawn = self._clockwised_pawn(temp_pawn)
+            temp_pawn = self._counter_clockwised_pawn(temp_pawn)
             for i in range(len(move_board)):
                 for j in range(len(move_board[0])):
                     if self._check_move(i, j, move_board, temp_pawn):
@@ -565,10 +565,9 @@ class GameManager:
             elif 'x' not in data or 'y' not in data or 'rotation' not in data:
                 print("No_move")
                 return {'status': 'error', 'code': 'NO_MOVE'}
-            print(data['rotation'])
             temp_pawn = self.game_data[data['game-nr']].game_pawn
-            for i in range(data['rotation']):
-                temp_pawn = self._clockwised_pawn(temp_pawn)
+            for i in range((4 - data['rotation']) % 4):
+                temp_pawn = self._counter_clockwised_pawn(temp_pawn)
             if not self._check_move(data['x'], data['y'], self.game_data[data['game-nr']].game_board_move, temp_pawn):
                 return {'status': 'error', 'code': 'WRONG_MOVE'}
             self.game_data[data['game-nr']].current_player = 3 - data['player-nr']
@@ -625,13 +624,9 @@ class GameManager:
                                 'game-nr': data['game-nr'],
                                 'game_move_board': self.game_data[data['game-nr']].game_board_move,
                                 'player_points': [player_1_score, player_2_score]})
-            self.server.notify(self.game_data[data['game-nr']].player_client[data['player-nr'] - 1], 15,
-                               {'notification': 'your-new-turn',
-                                'game-nr': data['game-nr'],
-                                'game_move_board': self.game_data[data['game-nr']].game_board_move,
-                                'player_points': [player_1_score, player_2_score]})
-            return {'status': 'ok', 'game-status': 'opponents-turn', 'game_move_board': self.game_data[data['game-nr']].game_board_move,
-                    'player_1_points': player_1_score, 'player_2_points': player_2_score}
+            return {'status': 'ok', 'game-status': 'opponents-turn',
+                    'game_move_board': self.game_data[data['game-nr']].game_board_move,
+                    'player_points': [player_1_score, player_2_score]}
 
         return {'status': 'error', 'code': 'INVALID_COMMAND'}
 
