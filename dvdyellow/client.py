@@ -37,10 +37,10 @@ class Przycisk(sf.Drawable):
 
 def ustaw_gre(game):
     if game is not None:
-        global gra
+        global gra, figura, moja_tura
         gra = game
         gra.on_your_turn = zmiana_tury
-        global figura
+        moja_tura = 1 if gra.player_number == 1 else 0
         figura = gra.get_transformable_pawn()
 
 
@@ -193,7 +193,7 @@ def main():
                 window.close()
 
             # ZABAWY MYSZKĄ
-            elif event == sf.MouseButtonEvent and event.pressed:
+            elif event == sf.MouseButtonEvent and event.released:
                 # STRONA STARTOWA
                 if actual == 0:
                     chosen = 0
@@ -422,13 +422,10 @@ def main():
                 res2 = txt(20, 450, tek=str(gra.player_points[2 - gra.player_number]), size=42, fo=fontCeltic,
                            color=kol2)
 
-                fig_y = figura.height
-                fig_x = figura.width
-
                 list_fig = []
                 czy_zielona = 1
 
-                wym = 500 / max(gra.width, gra.height)
+                wym = int(500 / max(gra.width, gra.height))
 
                 kwadrat = sf.Sprite(sf.Texture.from_file(os.path.join(data_directory, "black.jpg")))
                 kwadrat.texture_rectangle = sf.Rectangle((10, 10), (wym, wym))
@@ -443,13 +440,13 @@ def main():
                 while poz_y < gra.height:
                     poz_x = 0
                     while poz_x < gra.width:
-                        if y < 50 + (poz_y + 1) * wym and y + (fig_y - 1) * wym > 50 + poz_y * wym and x < 250 + (
-                            poz_x + 1) * wym \
-                                and x + (fig_x - 1) * wym > 250 + poz_x * wym \
+                        if y < 50 + (poz_y + 1) * wym and y + (figura.height - 1) * wym > 50 + poz_y * wym \
+                                and x < 250 + (poz_x + 1) * wym \
+                                and x + (figura.width - 1) * wym > 250 + poz_x * wym \
                                 and figura.get_pawn_point(floor((250 - x) / wym + poz_x + 1),
                                                           floor((50 - y) / wym + poz_y + 1)) \
-                                and y + (fig_y - 1) * wym <= 50 + gra.height * wym and y >= 50 \
-                                and x + (fig_x - 1) * wym <= 250 + gra.width * wym and x >= 250 and moja_tura:
+                                and y + (figura.height - 1) * wym <= 50 + gra.height * wym and y >= 50 \
+                                and x + (figura.width - 1) * wym <= 250 + gra.width * wym and x >= 250 and moja_tura:
                             if gra.get_field(poz_x, poz_y)[0] != 0:
                                 czy_zielona = 0
                             list_fig.append((250 + poz_x * (wym - 1), 50 + poz_y * (wym - 1)))
