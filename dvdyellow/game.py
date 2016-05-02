@@ -483,7 +483,7 @@ class Game:
                     elif data['winner'] == self.player_number:
                         self.result = 'won'
                     else:
-                        self.result = 'defeat'
+                        self.result = 'defeated'
                     self.player_points = data['player_points']
                     self.move_board = data.get('game_move_board')   # TODO - operator [] zamiast get
                 return True
@@ -518,7 +518,7 @@ class Game:
             elif data['winner'] == self.player_number:
                 self.result = 'won'
             else:
-                self.result = 'defeat'
+                self.result = 'defeated'
             self.player_points = data['player_points']
             self.move_board = data.get('game_move_board')   # TODO - operator [] zamiast get
         elif data.get('notification') == 'your-new-turn':
