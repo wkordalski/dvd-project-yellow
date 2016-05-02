@@ -205,10 +205,22 @@ class UserManager:
             del self.auth_status[client_id]
 
     def get_users_client(self, user_id):
+        """
+        returns client of connected with given user_id
+        :param user_id:
+        :return:
+        """
         return self.client_users.get(user_id)
 
     def get_clients_user(self, client_id):
-        return self.auth_status[client_id].uid
+        """
+        returns user_id connected with given client_id
+        :param client_id:
+        :return:
+        """
+
+        if client_id in self.auth_status:
+            return self.auth_status[client_id].uid
 
     def _query_handler(self, client_id, data):
         """
@@ -216,10 +228,16 @@ class UserManager:
         :param data: query to server
         :return:
         """
+        #
+        # first we check what command we should respond to
+        #
         if 'command' not in data:
             return None
 
         elif data['command'] == 'sign-in':
+            #
+            # we check login data and if
+            #
             if self.auth_status.get(client_id):
                 return {'status': 'error', 'code': ' ALREADY_LOGGED_IN'}
             if data.get('username') is None:
@@ -238,6 +256,9 @@ class UserManager:
                 return {'status': 'error', 'code': 'WRONG_PASSWORD'}
 
         elif data['command'] == 'sign-out':
+            #
+            # we only check if client was signed in
+            #
             if client_id in self.auth_status:
                 del self.client_users[self.auth_status[client_id].uid]
                 del self.auth_status[client_id]
@@ -246,6 +267,9 @@ class UserManager:
                 return {'status': 'error', 'code': 'NOT_SIGNED_IN'}
 
         elif data['command'] == 'get-status':
+            #
+            # we return what we know about client
+            #
             if client_id in self.auth_status:
                 user_data = self.auth_status[client_id]
                 return {'status': 'ok', 'authenticated': True, 'username': user_data.username, 'id': user_data.uid}
@@ -253,6 +277,9 @@ class UserManager:
                 return {'status': 'ok', 'authenticated': False}
 
         elif data['command'] == 'sign-up':
+            #
+            # we check if new user would be unique and have not empty username
+            #
             if 'username' not in data or data['username'] == '':
                 return {'status': 'error', 'code': 'NO_USERNAME'}
             if 'password' not in data:
@@ -264,6 +291,9 @@ class UserManager:
             return {'status': 'ok'}
 
         elif data['command'] == 'get-name':
+            #
+            # we only check if there is user connected with given id
+            #
             if 'id' not in data:
                 return {'status': 'error', 'code': 'NO_ID'}
             this_user = self.database_session.query(User).filter(User.id == data['id']).first()
@@ -304,20 +334,32 @@ class WaitingRoomManager:
         :param data: query to server
         :return: response to client
         """
+        #
+        # first we check what command should we respond to
+        #
         if 'command' not in data:
             return None
 
         elif data['command'] == 'start-listening':
+            #
+            # add yourself to those informed about others status changes
+            #
             self.listeners.add(client_id)
             return {'status': 'ok'}
 
         elif data['command'] == 'stop-listening':
+            #
+            # revert start-listening command
+            #
             if client_id not in self.listeners:
                 return {'status': 'error', 'code': 'CLIENT_NOT_LISTENING'}
             self.listeners.discard(client_id)
             return {'status': 'ok'}
 
         elif data['command'] == 'get-status':
+            #
+            # check status of given user
+            #
             if 'id' not in data:
                 return {'status': 'error', 'code': 'NO_USERID'}
             elif data['id'] not in self.users:
@@ -325,6 +367,9 @@ class WaitingRoomManager:
             return {'status': 'ok', 'user-status': self.users[data['id']]}
 
         elif data['command'] == 'set-status':
+            #
+            # sets status for user
+            #
             if 'new-status' not in data:
                 return {'status': 'error', 'code': 'NO_NEW_STATUS'}
             user_id = self.user_manager.get_clients_user(client_id)
@@ -342,6 +387,9 @@ class WaitingRoomManager:
             return {'status': 'ok'}
 
         elif data['command'] == 'get-waiting-room':
+            #
+            # returns dictionary user_id -> user's status
+            #
             return {'status': 'ok', 'waiting-dict': self.users}
 
         return {'status': 'error', 'code': 'INVALID_COMMAND'}
@@ -397,6 +445,9 @@ class GameManager:
         :return: True if move is legal, False otherwise
         """
         for i in range(len(pawn)):
+            #
+            # we search for collision between pawn and already occupied fields on map
+            #
             for j in range(len(pawn[0])):
                 try:
                     if pawn[i][j] == 1 and board[x + i][y + j] != 0:
@@ -438,6 +489,9 @@ class GameManager:
         :param nr: nr which should be printed on unreachable fields
         :return:
         """
+        #
+        # we create new board, which starts with all fields set as possible to block
+        #
         temp_pawn = pawn
         new_board = [[1 for j in range(len(move_board[0]))] for i in range(len(move_board))]
         for i in range(len(move_board)):
@@ -448,10 +502,16 @@ class GameManager:
             temp_pawn = self._counter_clockwised_pawn(temp_pawn)
             for i in range(len(move_board)):
                 for j in range(len(move_board[0])):
+                    #
+                    # we remove fields which can be covered by a valid move from those possibly blocked
+                    #
                     if self._check_move(i, j, move_board, temp_pawn):
                         self._print_move(temp_pawn, i, j, new_board, 0)
         for i in range(len(move_board)):
             for j in range(len(move_board[0])):
+                #
+                # we apply changes to the given board
+                #
                 if new_board[i][j] == 1:
                     move_board[i][j] = nr
 
@@ -463,6 +523,9 @@ class GameManager:
         :param player_2_client: second player playing game
         :return:
         """
+        #
+        # we create game pawn, randomly selected from database
+        #
         game_pawns = self.db_session.query(GamePawn)
         random_game_pawn_raw = game_pawns.offset(int(int(game_pawns.count() * random.random()))).first()
         pawn_string = random_game_pawn_raw.shapestring
@@ -471,6 +534,9 @@ class GameManager:
             for j in range(random_game_pawn_raw.height):
                 if pawn_string[j * random_game_pawn_raw.width + i] == '1':
                     pawn_table[i][j] = 1
+        #
+        # we create game board, randomly selected from database
+        #
         game_boards = self.db_session.query(GameBoard)
         random_game_board_raw = game_boards.offset(int(int(game_boards.count() * random.random()))).first()
         game_string = random_game_board_raw.shapestring
@@ -479,11 +545,17 @@ class GameManager:
             for j in range(random_game_board_raw.height):
                 if game_string[j * random_game_board_raw.width + i] == '1':
                     board_table2[i][j] = 0
+        #
+        # we remove unreachable fields
+        #
         self._transform_after_move(pawn_table, board_table2, -3)
         board_table = [[0 for j in range(random_game_board_raw.height)] for i in range(random_game_board_raw.width)]
         for i in range(random_game_board_raw.width):
             for j in range(random_game_board_raw.height):
                 if board_table2[i][j] == 0:
+                    #
+                    # we assign point values to valid fields
+                    #
                     board_table[i][j] = random.randint(1, 9)
 
         self.game_data[game_number] = GameData(player_1_client, player_2_client, board_table, board_table2,
@@ -495,10 +567,16 @@ class GameManager:
         :param data: query content
         :return: response to client
         """
+        #
+        # first we check what command should we respond to
+        #
         if 'command' not in data:
             return None
         elif data['command'] == 'find-random-game':
             if self.random_one is not None:
+                #
+                # sb is already waiting for game, we pair new one with him
+                #
                 self.counter += 1
                 self._start_random_game(self.counter, self.random_one, client_id)
                 self.server.notify(self.random_one, 14, {'notification': 'opponent-found',
@@ -516,9 +594,15 @@ class GameManager:
                 self.random_one = None
                 return return_value
             else:
+                #
+                # we are first ones waiting
+                #
                 self.random_one = client_id
                 return {'status': 'ok', 'game-status': 'waiting'}
         elif data['command'] == 'abandon-game':
+            #
+            # we check if client is in a game he wants to abandon, then notify the other player
+            #
             if 'game-nr' not in data:
                 return {'status': 'error', 'code': 'NO_GAME_NR'}
             elif data['game-nr'] not in self.game_data:
@@ -542,11 +626,19 @@ class GameManager:
             del self.game_data[data['game-nr']]
             return {'status': 'ok', 'game-result': 'defeated', 'detail': 'game-abandoned'}
         elif data['command'] == 'quit-searching':
+            #
+            # we check if client is waiting for a match, and then stop it
+            #
             if client_id != self.random_one:
                 return {'status': 'error', 'code': 'NOT_SEARCHING'}
             self.random_one = None
             return {'status': 'ok'}
         elif data['command'] == 'move':
+            #
+            # we allow player to make a move if it is valid, then proceed with the procedure:
+            # if game ended, we notify both players about it
+            # if not, we notify the second one that he is to make a move now
+            #
             if 'game-nr' not in data:
                 print("no_game_nr")
                 return {'status': 'error', 'code': 'NO_GAME_NR'}
@@ -570,10 +662,19 @@ class GameManager:
                 temp_pawn = self._counter_clockwised_pawn(temp_pawn)
             if not self._check_move(data['x'], data['y'], self.game_data[data['game-nr']].game_board_move, temp_pawn):
                 return {'status': 'error', 'code': 'WRONG_MOVE'}
+            #
+            # we checked that the move is valid, we allow the other player to make his
+            #
             self.game_data[data['game-nr']].current_player = 3 - data['player-nr']
+            #
+            # we mark the move on the server side
+            #
             self._print_move(temp_pawn, data['x'], data['y'], self.game_data[data['game-nr']].game_board_move,
                              data['player-nr'])
             self._transform_after_move(temp_pawn, self.game_data[data['game-nr']].game_board_move, -data['player-nr'])
+            #
+            # we check the score, and if there is any move possible - if not, we end game and notify players about it
+            #
             player_1_score = 0
             player_2_score = 0
             is_it_end = True
