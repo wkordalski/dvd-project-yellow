@@ -92,6 +92,11 @@ def zmiana_tury(game):
         moja_tura = 1
 
 
+def rysuj(window, *args):
+    for a in args:
+        window.draw(a)
+
+
 def main():
     global gra
     global figura
@@ -158,7 +163,7 @@ def main():
 
     # Game over
     won = txt(250, 250, color=GREY, size=35, fo=fontCeltic, tek="Congratulations, you won!")
-    defeated = txt(250, 250, color=GREY, size=35, fo=fontCeltic, tek="Sorry, you defeated. Next time will be better!")
+    defeated = txt(250, 250, color=GREY, size=35, fo=fontCeltic, tek="Sorry, you defeated. \nNext time will be better!")
     draw = txt(250, 250, color=GREY, size=35, fo=fontCeltic, tek="Draw, no one won!")
 
 
@@ -187,7 +192,7 @@ def main():
                 if actual in (4, 5):
                     if actual == 4:
                         wyjscie_z_menu(session)
-                    else:
+                    elif gra and not gra.is_finished:
                         gra.abandon().result
                     wylogowywanie(session)
                 window.close()
@@ -275,7 +280,7 @@ def main():
                         option = 3
                     elif zmiany.zawiera(x, y):
                         option = 4
-                    elif menu.zawiera(x, y):
+                    elif wyloguj.zawiera(x, y):
                         wyjscie_z_menu(session)
                         wylogowywanie(session)
                         moj_login = ""
@@ -287,14 +292,19 @@ def main():
                 # GRA WŁAŚCIWA
                 elif actual == 5:
                     if gra:
-                        if finish.zawiera(x, y):
+                        if not gra.is_finished:
+                            if finish.zawiera(x, y):
+                                actual = 4
+                                gra.abandon().result
+                                gra = None
+                            if moja_tura:
+                                xx = int((x - 250) / (wym - 1))
+                                yy = int((y - 50) / (wym - 1))
+                                if 0 <= xx < gra.width and 0 <= yy < gra.height and gra.move((xx, yy), figura).result:
+                                    zmiana_tury(gra)
+                        elif menu.zawiera(x, y):
                             actual = 4
-                            gra.abandon().result
-                        if moja_tura:
-                            xx = int((x - 250) / (wym - 1))
-                            yy = int((y - 50) / (wym - 1))
-                            if 0 <= xx < gra.width and 0 <= yy < gra.height and gra.move((xx, yy), figura).result:
-                                zmiana_tury(gra)
+                            gra = None
 
 
             # ZABAWY KLAWIATURĄ
@@ -319,6 +329,7 @@ def main():
                         if logowanie(session, logg.string, password):
                             actual = 4
                             logerror = 0
+                            moj_login = logg.string
                             logg.string = ""
                             pas.string = ""
                             password = ""
@@ -337,9 +348,9 @@ def main():
                             regerror = 1
                 elif actual in (1, 2) and event.code == sf.Keyboard.TAB:
                     chosen = (chosen + 1) % 3
-                elif actual == 5 and event.code == sf.Keyboard.RIGHT:
+                elif gra and not gra.is_finished and actual == 5 and event.code == sf.Keyboard.RIGHT:
                     figura.rotate_clockwise()
-                elif actual == 5 and event.code == sf.Keyboard.LEFT:
+                elif gra and not gra.is_finished and actual == 5 and event.code == sf.Keyboard.LEFT:
                     figura.rotate_clockwise()
                     figura.rotate_clockwise()
                     figura.rotate_clockwise()
@@ -348,7 +359,7 @@ def main():
             break
 
         window.clear()
-        window.draw(ground)
+        rysuj(window, ground)
         if actual == 1 or actual == 2:
             if chosen == 1:
                 login.pole.color = sf.Color(255, 255, 255, 200)
@@ -360,67 +371,57 @@ def main():
                 login.pole.color = sf.Color(255, 255, 255, 100)
                 haslo.pole.color = sf.Color(255, 255, 255, 100)
 
-            window.draw(login)
-            window.draw(haslo)
-            window.draw(menu)
-            window.draw(logg)
-            window.draw(pas)
+            rysuj(window, login, haslo, menu, logg, pas)
 
         if actual == 1:
             if logerror:
-                window.draw(logerror_txt)
-            window.draw(zaloguj)
+                rysuj(window, logerror_txt)
+            rysuj(window, zaloguj)
 
         if actual == 2:
             if regerror:
-                window.draw(regerror_txt)
-            window.draw(rejestruj)
+                rysuj(window, regerror_txt)
+            rysuj(window, rejestruj)
 
         if actual == 4:
-            window.draw(game)
-            window.draw(nowa)
-            window.draw(ranking)
-            window.draw(przyjaciele)
-            window.draw(zmiany)
-            window.draw(wyloguj)
+            rysuj(window, game, nowa, ranking, przyjaciele, zmiany, wyloguj)
             if option == 1:
-                window.draw(box)
                 heading = txt(300, 200, tek="Online Players", size=33, fo=fontCeltic)
-                window.draw(heading)
-                window.draw(random)
+                rysuj(window, box, heading, random)
                 counter = 0
                 for gamer in zalogowani(session):
                     player = Przycisk(gamer, 525, 295 + 50 * counter, 20, 100, lenx=450, leny=40, fo=fontArial,
                                       color=sf.Color.WHITE, style=sf.Text.REGULAR)
-                    window.draw(player)
+                    rysuj(window, player)
                     counter += 1
 
         if actual == 5:
             if not gra:
-                window.draw(wait)
+                rysuj(window, wait)
             elif gra.is_finished:
                     if gra.result == 'won':
-                        window.draw(won)
+                        rysuj(window, won, menu)
                     elif gra.result == 'defeated':
-                        window.draw(defeated)
+                        rysuj(window, defeated, menu)
                     elif gra.result == 'draw':
-                        window.draw(draw)
+                        rysuj(window, draw, menu)
             else:
-                window.draw(big_box)
-                window.draw(big_box2)
-                window.draw(finish)
+                print(gra.is_finished)
+                rysuj(window, big_box, big_box2, finish)
 
                 kol1 = sf.Color(255, 255, 0, 255)
                 kol1b = sf.Color(255, 255, 0, 150)
                 kol2 = sf.Color(64, 32, 192, 255)
                 kol2b = sf.Color(64, 32, 192, 150)
 
-                play1 = txt(20, 80, tek=moj_login, size=42, fo=fontCeltic, color=kol1)
-                res1 = txt(20, 130, tek=str(gra.player_points[gra.player_number - 1]), size=42, fo=fontCeltic,
-                           color=kol1)
-                play2 = txt(20, 500, tek=przeciwnik(), size=42, fo=fontCeltic, color=kol2)
-                res2 = txt(20, 450, tek=str(gra.player_points[2 - gra.player_number]), size=42, fo=fontCeltic,
-                           color=kol2)
+                play_upp = txt(20, 80, tek=moj_login, size=42, fo=fontCeltic,
+                               color=(kol1 if gra.player_number == 1 else kol2))
+                res_upp = txt(20, 130, tek=str(gra.player_points[gra.player_number - 1]), size=42, fo=fontCeltic,
+                              color=(kol1 if gra.player_number == 1 else kol2))
+                play_low = txt(20, 500, tek=przeciwnik(), size=42, fo=fontCeltic,
+                               color=(kol2 if gra.player_number == 1 else kol1))
+                res_low = txt(20, 450, tek=str(gra.player_points[2 - gra.player_number]), size=42, fo=fontCeltic,
+                              color=(kol2 if gra.player_number == 1 else kol1))
 
                 list_fig = []
                 czy_zielona = 1
@@ -464,7 +465,7 @@ def main():
                             kwadrat.color = sf.Color(255, 255, 255, 0)
 
                         kwadrat.position = sf.Vector2(250 + poz_x * (wym - 1), 50 + poz_y * (wym - 1))
-                        window.draw(kwadrat)
+                        rysuj(window, kwadrat)
                         if gra.get_field(poz_x, poz_y)[1] < 0:
                             numerek = txt(250 + poz_x * (wym - 1) + wym / 8, 50 + poz_y * (wym - 1),
                                           tek=str(gra.get_field(poz_x, poz_y)[1]), size=wym * 3 / 5)
@@ -472,39 +473,26 @@ def main():
                             numerek = txt(250 + poz_x * (wym - 1) + wym / 5, 50 + poz_y * (wym - 1),
                                           tek=str(gra.get_field(poz_x, poz_y)[1]), size=wym * 3 / 5)
                         if gra.get_field(poz_x, poz_y)[0] != -3:
-                            window.draw(numerek)
+                            rysuj(window, numerek)
                         poz_x += 1
                     poz_y += 1
 
                 for poz in list_fig:
                     if czy_zielona:
-                        kwadrat.color = sf.Color.GREEN
+                        kwadrat.color = sf.Color(0, 255, 0, 100)
                     else:
                         kwadrat.color = sf.Color.RED
                     kwadrat.position = sf.Vector2(poz[0], poz[1])
-                    window.draw(kwadrat)
+                    rysuj(window, kwadrat)
 
-                window.draw(play1)
-                window.draw(play2)
-                window.draw(res1)
-                window.draw(res2)
-
-                window.draw(play1)
-                window.draw(play2)
-                window.draw(res1)
-                window.draw(res2)
+                rysuj(window, play_upp, play_low, res_upp, res_low)
 
         # Error 404
         if actual == 3:
-            window.draw(game)
-            window.draw(lazy)
-            window.draw(menu)
+            rysuj(window, game, lazy, menu)
 
         if actual == 0:
-            window.draw(game)
-            window.draw(log)
-            window.draw(konto)
-            window.draw(offline)
+            rysuj(window, game, log, konto, offline)
 
         window.display()
 
