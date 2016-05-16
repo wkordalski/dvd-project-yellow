@@ -871,6 +871,13 @@ class GameManager:
             return {'status': 'ok', 'points-earned': points1, 'wins': wins1, 'points-lost': points2, 'defeats': wins2,
                     'draws': 'draws'}
 
+        elif data['command'] == 'get-ranking':
+            pre_ranking = self.db_session.query(User).order_by(desc(User.ranking)).all()
+            ranking = []
+            for i in range(pre_ranking.length()):
+                rank_position = {'position': i, 'id': pre_ranking[i].id, 'username': pre_ranking[i].name, 'points': pre_ranking[i].ranking}
+                ranking[i] = rank_position
+            return {'status': 'ok', 'ranking': ranking}
         return {'status': 'error', 'code': 'INVALID_COMMAND'}
 
 
