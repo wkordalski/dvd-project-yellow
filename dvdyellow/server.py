@@ -10,11 +10,12 @@ from functools import reduce
 
 import random
 from appdirs import AppDirs
+from sqlalchemy import desc
 from sqlalchemy.engine import create_engine
 from sqlalchemy.engine.url import URL
 from sqlalchemy.orm.session import sessionmaker
 
-from .orm import User, GameBoard, GamePawn, create_schemes
+from .orm import User, GameBoard, GamePawn, GameResult, create_schemes
 from .network import Server
 
 
@@ -32,7 +33,7 @@ class ServerManager:
         self.waiting_room = WaitingRoomManager(self)
         self.game_manager = GameManager(self.server, self.user_manager, self.db_session)
         self.db_session.add(GamePawn(name='default_pawn', width=2, height=3, shapestring="101110"))
-        self.db_session.add(GameBoard(name='default_board', width=6, height=8, shapestring="1"*48))
+        self.db_session.add(GameBoard(name='default_board', width=6, height=8, shapestring="1" * 48))
         self.db_session.flush()
         self.on_run = None
 
@@ -286,7 +287,7 @@ class UserManager:
                 return {'status': 'error', 'code': 'NO_PASSWORD'}
             if self.database_session.query(User).filter(User.name == data['username']).first():
                 return {'status': 'error', 'code': 'LOGIN_TAKEN'}
-            self.database_session.add(User(name=data['username'], password=data['password']))
+            self.database_session.add(User(name=data['username'], password=data['password'], ranking=0))
             self.database_session.flush()
             return {'status': 'ok'}
 
@@ -309,7 +310,8 @@ class WaitingRoomManager:
     """
     Manages players' status
     """
-    def __init__(self, server_manager : ServerManager):
+
+    def __init__(self, server_manager: ServerManager):
         """
         Creates waiting room manager.
         :param server_manager: ServerManager using this class
@@ -435,6 +437,20 @@ class GameManager:
         self.game_data = dict()
         self.counter = 0
         self.db_session = db_session
+
+    def _update_ranking_after_game(self, player1, points1, player2, points2, winner):
+        player_1_record = self.db_session.query(User).filter(User.id == player1).first()
+        player_2_record = self.db_session.query(User).filter(User.id == player2).first()
+        self.db_session.flush()
+        winner = winner
+        self.db_session.add(
+            GameResult(player1=player1, player2=player2, points1=points1, points2=points2, winner=winner))
+        rank1 = player_1_record.ranking + (points1 / (points1 + points2) - 0.5) * 10
+        rank2 = player_2_record.ranking + (points2 / (points1 + points2) - 0.5) * 10
+        player_1_record.ranking = rank1
+        player_2_record.ranking = rank2
+        self.db_session.commit()
+        self.db_session.flush()
 
     def _check_move(self, x, y, board, pawn):
         """
@@ -583,7 +599,8 @@ class GameManager:
                                                          'opponent-id': self.user_manager.get_clients_user(client_id),
                                                          'game-nr': self.counter, 'player-number': 1,
                                                          'game-board': self.game_data[self.counter].game_board_point,
-                                                         'game-board-move': self.game_data[self.counter].game_board_move,
+                                                         'game-board-move': self.game_data[
+                                                             self.counter].game_board_move,
                                                          'game-pawn': self.game_data[self.counter].game_pawn})
                 return_value = {'status': 'ok', 'game-status': 'found',
                                 'opponent-id': self.user_manager.get_clients_user(self.random_one),
@@ -620,9 +637,23 @@ class GameManager:
                     elif self.game_data[data['game-nr']].game_board_move[i][j] == -2:
                         player_2_score += self.game_data[data['game-nr']].game_board_point[i][j]
             self.server.notify(self.game_data[data['game-nr']].player_client[2 - data['player-nr']], 15,
-                              {'notification': 'game-finished', 'winner': 3 - data['player-nr'], 'detail': 'enemy-abandoned-game',
-                               'game-nr': data['game-nr'], 'game_move_board': self.game_data[data['game-nr']].game_board_move,
-                               'player_points': [player_1_score, player_2_score]})
+                               {'notification': 'game-finished', 'winner': 3 - data['player-nr'],
+                                'detail': 'enemy-abandoned-game',
+                                'game-nr': data['game-nr'],
+                                'game_move_board': self.game_data[data['game-nr']].game_board_move,
+                                'player_points': [player_1_score, player_2_score]})
+            if data['player-nr'] == 1:
+                self._update_ranking_after_game(
+                        self.user_manager.get_clients_user(self.game_data[data['game-nr']].player_client[0]),
+                        0,
+                        self.user_manager.get_clients_user(self.game_data[data['game-nr']].player_client[1]),
+                        1, 2)
+            else:
+                self._update_ranking_after_game(
+                        self.user_manager.get_clients_user(self.game_data[data['game-nr']].player_client[0]),
+                        1,
+                        self.user_manager.get_clients_user(self.game_data[data['game-nr']].player_client[1]),
+                        0, 1)
             del self.game_data[data['game-nr']]
             return {'status': 'ok', 'game-result': 'defeated', 'detail': 'game-abandoned'}
         elif data['command'] == 'quit-searching':
@@ -688,9 +719,15 @@ class GameManager:
                         player_2_score += self.game_data[data['game-nr']].game_board_point[i][j]
             if is_it_end:
                 if player_1_score > player_2_score:
+                    self._update_ranking_after_game(
+                        self.user_manager.get_clients_user(self.game_data[data['game-nr']].player_client[0]),
+                        player_1_score,
+                        self.user_manager.get_clients_user(self.game_data[data['game-nr']].player_client[1]),
+                        player_2_score, 1)
                     self.server.notify(self.game_data[data['game-nr']].player_client[2 - data['player-nr']], 15,
                                        {'notification': 'game-finished', 'winner': 1, 'detail': 'no-more-moves',
-                                        'game-nr': data['game-nr'], 'game_move_board': self.game_data[data['game-nr']].game_board_move,
+                                        'game-nr': data['game-nr'],
+                                        'game_move_board': self.game_data[data['game-nr']].game_board_move,
                                         'player_points': [player_1_score, player_2_score]})
 
                     to_return = {'status': 'ok', 'game-status': 'finished', 'winner': 1, 'detail': 'no-more-moves',
@@ -700,23 +737,36 @@ class GameManager:
                     del self.game_data[data['game-nr']]
                     return to_return
                 elif player_2_score > player_1_score:
+                    self._update_ranking_after_game(
+                        self.user_manager.get_clients_user(self.game_data[data['game-nr']].player_client[0]),
+                        player_1_score,
+                        self.user_manager.get_clients_user(self.game_data[data['game-nr']].player_client[1]),
+                        player_2_score, 2)
                     self.server.notify(self.game_data[data['game-nr']].player_client[2 - data['player-nr']], 15,
                                        {'notification': 'game-finished', 'winner': 2, 'detail': 'no-more-moves',
                                         'game-nr': data['game-nr'],
                                         'game_move_board': self.game_data[data['game-nr']].game_board_move,
                                         'player_points': [player_1_score, player_2_score]})
                     to_return = {'status': 'ok', 'game-status': 'finished', 'winner': 2, 'detail': 'no-more-moves',
-                                 'game-nr': data['game-nr'], 'game_move_board': self.game_data[data['game-nr']].game_board_move,
+                                 'game-nr': data['game-nr'],
+                                 'game_move_board': self.game_data[data['game-nr']].game_board_move,
                                  'player_points': [player_1_score, player_2_score]}
                     del self.game_data[data['game-nr']]
                     return to_return
                 else:
+                    self._update_ranking_after_game(
+                        self.user_manager.get_clients_user(self.game_data[data['game-nr']].player_client[0]),
+                        player_1_score,
+                        self.user_manager.get_clients_user(self.game_data[data['game-nr']].player_client[1]),
+                        player_2_score, 0)
                     self.server.notify(self.game_data[data['game-nr']].player_client[2 - data['player-nr']], 15,
                                        {'notification': 'game-finished', 'winner': 0, 'detail': 'no-more-moves',
-                                        'game-nr': data['game-nr'],'game_move_board': self.game_data[data['game-nr']].game_board_move,
+                                        'game-nr': data['game-nr'],
+                                        'game_move_board': self.game_data[data['game-nr']].game_board_move,
                                         'player_1_points': player_1_score, 'player_2_points': player_2_score})
                     to_return = {'status': 'ok', 'game-status': 'finished', 'winner': 0, 'detail': 'no-more-moves',
-                                 'game-nr': data['game-nr'], 'game_move_board': self.game_data[data['game-nr']].game_board_move,
+                                 'game-nr': data['game-nr'],
+                                 'game_move_board': self.game_data[data['game-nr']].game_board_move,
                                  'player_points': [player_1_score, player_2_score]}
                     del self.game_data[data['game-nr']]
                     return to_return
@@ -728,6 +778,98 @@ class GameManager:
             return {'status': 'ok', 'game-status': 'opponents-turn',
                     'game_move_board': self.game_data[data['game-nr']].game_board_move,
                     'player_points': [player_1_score, player_2_score]}
+
+        elif data['command'] == 'check-ranking-position':
+            #
+            # we check login data and if are correct, return user's ranking position
+            #
+            if data.get('id') is None:
+                return {'status': 'error', 'code': 'NO_ID'}
+            this_user = self.db_session.query(User).filter(User.id == data['id']).first()
+            self.db_session.flush()
+            if not this_user:
+                return {'status': 'error', 'code': 'NO_SUCH_USER'}
+            this_ranking = self.db_session.query(User).order_by(desc(User.ranking)).all()
+            self.db_session.flush()
+            for i in range(this_ranking.length()):
+                if this_ranking[i].id == this_user.id:
+                    return {'status': 'ok', 'ranking-position': i}
+
+        elif data['command'] == 'match-history-between-2':
+            #
+            # we check login data and if are correct, return user's ranking points
+            #
+            if data.get('id1') is None:
+                return {'status': 'error', 'code': 'NO_ID1'}
+            if data.get('id2') is None:
+                return {'status': 'error', 'code': 'NO_ID2'}
+            games = self.db_session.query(GameResult).filter(GameResult.player1 == data['id1'],
+                                                             GameResult.player2 == data['id2']).all()
+            games_inverted = self.db_session.query(GameResult).filter(GameResult.player1 == data['id2'],
+                                                                      GameResult.player2 == data['id1']).all()
+            self.db_session.flush()
+            points1 = 0
+            points2 = 0
+            wins1 = 0
+            wins2 = 0
+            draws = 0
+            for i in range(games.length()):
+                points1 += games[i].points1
+                points2 += games[i].points2
+                if games[i].winner == 1:
+                    wins1 += 1
+                elif games[i].winner == 2:
+                    wins2 += 1
+                else:
+                    draws += 1
+            for i in range(games_inverted.length()):
+                points1 += games[i].points2
+                points2 += games[i].points1
+                if games[i].winner == 2:
+                    wins1 += 1
+                elif games[i].winner == 1:
+                    wins2 += 1
+                else:
+                    draws += 1
+
+            return {'status': 'ok', 'points1': points1, 'wins1': wins1, 'points2': points2, 'wins2': wins2,
+                    'draws': 'draws'}
+
+        elif data['command'] == 'match-history-summary':
+            #
+            # We check for statistics of player
+            #
+            if data.get('id') is None:
+                return {'status': 'error', 'code': 'NO_ID'}
+            games = self.db_session.query(GameResult).filter(GameResult.player1 == data['id1']).all()
+            games_inverted = self.db_session.query(GameResult).filter(GameResult.player2 == data['id1']).all()
+            self.db_session.flush()
+            points1 = 0
+            points2 = 0
+            wins1 = 0
+            wins2 = 0
+            draws = 0
+            for i in range(games.length()):
+                points1 += games[i].points1
+                points2 += games[i].points2
+                if games[i].winner == 1:
+                    wins1 += 1
+                elif games[i].winner == 2:
+                    wins2 += 1
+                else:
+                    draws += 1
+            for i in range(games_inverted.length()):
+                points1 += games[i].points2
+                points2 += games[i].points1
+                if games[i].winner == 2:
+                    wins1 += 1
+                elif games[i].winner == 1:
+                    wins2 += 1
+                else:
+                    draws += 1
+
+            return {'status': 'ok', 'points-earned': points1, 'wins': wins1, 'points-lost': points2, 'defeats': wins2,
+                    'draws': 'draws'}
 
         return {'status': 'error', 'code': 'INVALID_COMMAND'}
 
