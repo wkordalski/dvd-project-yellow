@@ -549,7 +549,7 @@ class WaitingRoom:
             else:
                 return None
 
-        return AsyncQuery(lambda: self.session.client.query(5, data), lambda r: r.check(), blablabla).run()
+        return AsyncQuery(lambda: self.session.client.query(5, data), lambda r: r.check(), parse_ranking).run()
 
 
 class Pawn:
