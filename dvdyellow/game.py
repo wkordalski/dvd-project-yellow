@@ -537,6 +537,20 @@ class WaitingRoom:
 
         return AsyncQuery(lambda: self.session.client.query(4, data), lambda r: r.check(), _check_result_ok).run()
 
+    def get_ranking(self):
+        data = {
+            'command': 'get-ranking'
+        }
+
+        def parse_ranking(query):
+            if query.response.get('status') == 'ok':
+                ranking = query.response.get('ranking')
+                return [self.session._make_user(e['id']) for e in ranking]
+            else:
+                return None
+
+        return AsyncQuery(lambda: self.session.client.query(5, data), lambda r: r.check(), blablabla).run()
+
 
 class Pawn:
     """
