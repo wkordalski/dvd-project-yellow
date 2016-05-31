@@ -876,7 +876,7 @@ class GameManager:
             ranking = []
             for i in range(pre_ranking.length()):
                 rank_position = {'position': i, 'id': pre_ranking[i].id, 'username': pre_ranking[i].name, 'points': pre_ranking[i].ranking}
-                ranking[i] = rank_position
+                ranking.append(rank_position)
             return {'status': 'ok', 'ranking': ranking}
         return {'status': 'error', 'code': 'INVALID_COMMAND'}
 
