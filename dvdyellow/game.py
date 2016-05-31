@@ -454,6 +454,11 @@ class User:
         else:
             return AsyncQuery(lambda: None, lambda _: True, lambda _: self._name).run()
 
+    def get_points(self):
+        # TODO - zwraca liczbę punktów gracza
+        return AsyncQuery(lambda: None, lambda r: r, lambda r: None).run()
+        pass
+
     def get_status(self):
         """
         Gets status of the user.
