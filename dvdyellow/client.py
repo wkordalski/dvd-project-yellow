@@ -75,7 +75,7 @@ def zalogowani():
 
 
 def lista_rankingowa():
-    return [u.name.result for u in session.get_waiting_room().result.get_ranking().result]
+    return [u[0].name.result for u in session.get_waiting_room().result.get_ranking().result]
 
 
 def wyjscie_z_menu():
