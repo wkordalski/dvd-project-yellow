@@ -11,13 +11,16 @@ figura = None
 session = None
 moja_tura = 0
 
+tekstury = dict()
 
 # Przycisk
 class Przycisk(sf.Drawable):
     def __init__(self, napis, x, y, minus_y=20, jasnosc=255, lenx=250, leny=60, fo=fontCeltic, color=sf.Color.BLACK,
                  style=sf.Text.BOLD, size=30, texture="czerwony.JPG"):
         sf.Drawable.__init__(self)
-        self.pole = sf.Sprite(sf.Texture.from_file(os.path.join(data_directory, texture)))
+        if texture not in tekstury:
+            tekstury[texture] = sf.Texture.from_file(os.path.join(data_directory, texture))
+        self.pole = sf.Sprite(tekstury[texture])
         self.pole.texture_rectangle = sf.Rectangle(sf.Vector2(x - lenx / 2, y - leny / 2), sf.Vector2(lenx, leny))
         self.pole.color = sf.Color(255, 255, 255, jasnosc)  # RGB, jasność
         self.pole.position = sf.Vector2(x - lenx / 2, y - leny / 2)

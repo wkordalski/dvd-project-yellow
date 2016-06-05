@@ -454,11 +454,6 @@ class User:
         else:
             return AsyncQuery(lambda: None, lambda _: True, lambda _: self._name).run()
 
-    def get_points(self):
-        # TODO - zwraca liczbę punktów gracza
-        return AsyncQuery(lambda: None, lambda r: r, lambda r: 0).run()
-        pass
-
     def get_status(self):
         """
         Gets status of the user.
@@ -550,7 +545,7 @@ class WaitingRoom:
         def parse_ranking(query):
             if query.response.get('status') == 'ok':
                 ranking = query.response.get('ranking')
-                return [self.session._make_user(e['id'], e['points']) for e in ranking]
+                return [(self.session._make_user(e['id']), e['points']) for e in ranking]
             else:
                 return None
 
