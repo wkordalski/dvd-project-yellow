@@ -879,6 +879,54 @@ class GameManager:
                 rank_position = {'position': i, 'id': pre_ranking[i].id, 'username': pre_ranking[i].name, 'points': pre_ranking[i].ranking}
                 ranking.append(rank_position)
             return {'status': 'ok', 'ranking': ranking}
+
+        elif data['command'] == 'challenge':
+            if 'opponent' not in data or self.user_manager.get_users_client(data['opponent']) is None:
+                return {"status": "error", 'code': 'NOT_VALID_OPPONENT'}
+            self.waiters[self.user_manager.get_clients_user(client_id)] =  data['opponent']
+            self.server.notify(self.user_manager.get_users_client(data['opponent']), 16,
+                               {'notification' : 'random-game-challenge', 'challenger' : self.user_manager.get_clients_user(client_id)})
+            return {'status' : 'ok'}
+
+        elif data['command'] == 'cancel-challenge':
+            if self.waiters.get(self.user_manager.get_clients_user(client_id)) is None:
+                return {"status": "error", 'code': 'NOT_CHALLENGING'}
+
+            self.server.notify(self.user_manager.get_users_client(
+                self.waiters[self.user_manager.get_clients_user(client_id)]), 16, {'notification' : 'challenge-backed',
+                                                         'challenger' : self.user_manager.get_clients_user(client_id)})
+            del(self.waiters[self.user_manager.get_clients_user(client_id)])
+            return {'status' : 'ok'}
+
+        elif data['command'] == 'accept-challenge':
+            if 'opponent' not in data or self.waiters[data['opponent']] != self.user_manager.get_clients_user(client_id):
+                return {'status' : 'error', 'code' : 'OPPONENT_NOT_CHALLENGING'}
+            del(self.waiters[data['opponent']])
+            self.counter += 1
+            self._start_random_game(self.counter, self.user_manager.get_users_client(data['opponent']), client_id)
+            self.server.notify(self.user_manager.get_users_client(data['opponent']), 14, {'notification': 'opponent-found',
+                                                     'opponent-id': self.user_manager.get_clients_user(client_id),
+                                                     'game-nr': self.counter, 'player-number': 1,
+                                                     'game-board': self.game_data[self.counter].game_board_point,
+                                                     'game-board-move': self.game_data[
+                                                         self.counter].game_board_move,
+                                                     'game-pawn': self.game_data[self.counter].game_pawn})
+            return_value = {'status': 'ok', 'game-status': 'found',
+                            'opponent-id': data['opponent'],
+                            'game-nr': self.counter, 'player-number': 2,
+                            'game-board': self.game_data[self.counter].game_board_point,
+                            'game-board-move': self.game_data[self.counter].game_board_move,
+                            'game-pawn': self.game_data[self.counter].game_pawn}
+            return return_value
+
+        elif data['command'] == 'decline-challenge':
+            if 'opponent' not in data or self.waiters.get(data['opponent']) != self.user_manager.get_clients_user(client_id):
+                return {'status' : 'error', 'code': 'OPPONENT_NOT_CHALLENGING'}
+            del(self.waiters[data['opponent']])
+            self.server.notify(self.user_manager.get_users_client(data['opponent']),
+                               16, {'notification': 'challenge-declined', 'challenger': self.user_manager.get_clients_user(client_id)})
+            return {'status' : 'ok'}
+
         return {'status': 'error', 'code': 'INVALID_COMMAND'}
 
 
