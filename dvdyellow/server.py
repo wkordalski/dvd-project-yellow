@@ -437,6 +437,7 @@ class GameManager:
         self.game_data = dict()
         self.counter = 0
         self.db_session = db_session
+        self.waiters = dict()
 
     def _update_ranking_after_game(self, player1, points1, player2, points2, winner):
         player_1_record = self.db_session.query(User).filter(User.id == player1).first()
@@ -874,7 +875,7 @@ class GameManager:
         elif data['command'] == 'get-ranking':
             pre_ranking = self.db_session.query(User).order_by(desc(User.ranking)).all()
             ranking = []
-            for i in range(pre_ranking.length()):
+            for i in range(len(pre_ranking)):
                 rank_position = {'position': i, 'id': pre_ranking[i].id, 'username': pre_ranking[i].name, 'points': pre_ranking[i].ranking}
                 ranking.append(rank_position)
             return {'status': 'ok', 'ranking': ranking}
