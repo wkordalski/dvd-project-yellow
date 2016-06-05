@@ -11,13 +11,16 @@ figura = None
 session = None
 moja_tura = 0
 
+tekstury = dict()
 
 # Przycisk
 class Przycisk(sf.Drawable):
     def __init__(self, napis, x, y, minus_y=20, jasnosc=255, lenx=250, leny=60, fo=fontCeltic, color=sf.Color.BLACK,
                  style=sf.Text.BOLD, size=30, texture="czerwony.JPG"):
         sf.Drawable.__init__(self)
-        self.pole = sf.Sprite(sf.Texture.from_file(os.path.join(data_directory, texture)))
+        if texture not in tekstury:
+            tekstury[texture] = sf.Texture.from_file(os.path.join(data_directory, texture))
+        self.pole = sf.Sprite(tekstury[texture])
         self.pole.texture_rectangle = sf.Rectangle(sf.Vector2(x - lenx / 2, y - leny / 2), sf.Vector2(lenx, leny))
         self.pole.color = sf.Color(255, 255, 255, jasnosc)  # RGB, jasność
         self.pole.position = sf.Vector2(x - lenx / 2, y - leny / 2)
@@ -45,10 +48,11 @@ def ustaw_gre(game):
         figura = gra.get_transformable_pawn()
 
 
-def txt(x, y, color=sf.Color.BLACK, size=25, fo=fontArial, tek=""):
+def txt(x, y, color=sf.Color.BLACK, size=25, fo=fontArial, tek="", style=sf.Text.REGULAR):
     tekst = sf.Text(tek)
     tekst.font = fo
     tekst.character_size = size
+    tekst.style = style
     tekst.color = color
     tekst.position = x + 10, y + 10
     return tekst
@@ -71,6 +75,10 @@ def wylogowywanie():
 
 def zalogowani():
     return [u.name.result for u in session.get_waiting_room().result.get_online_users().result]
+
+
+def lista_rankingowa():
+    return [u[0].name.result for u in session.get_waiting_room().result.get_ranking().result]
 
 
 def wyjscie_z_menu():
@@ -137,10 +145,10 @@ def main():
     login = Przycisk("Login", 400, 230, 70, 100, color=GREY)
     haslo = Przycisk("Password", 400, 330, 70, 100, color=GREY)
 
-    host_txt = txt(275, 200)
-    port_txt = txt(275, 300)
+    host_txt = txt(275, 200, tek="localhost", color=sf.Color(255, 255, 255, 200), style=sf.Text.ITALIC)
+    port_txt = txt(275, 300, tek="42371", color=sf.Color(255, 255, 255, 200), style=sf.Text.ITALIC)
     login_txt = txt(275, 200)
-    haslo_txt = txt(275, 300) # gwiazdki
+    haslo_txt = txt(275, 300)  # gwiazdki
 
     moje_haslo = ""
     moj_login = ""
@@ -217,32 +225,47 @@ def main():
                 elif event == sf.MouseButtonEvent and event.released:
                     if menu.zawiera(x, y):
                         actual = 0
+                        host_txt.string = "localhost"
+                        host_txt.color = sf.Color(255, 255, 255, 200)
+                        host_txt.style = sf.Text.ITALIC
+                        port_txt.string = "42371"
+                        port_txt.color = sf.Color(255, 255, 255, 200)
+                        port_txt.style = sf.Text.ITALIC
                         error = 0
                     elif polacz.zawiera(x, y):
                         if ustaw_sesje(host_txt.string, port_txt.string):
                             actual = 0
-                            host_txt.string = ""
-                            port_txt.string = ""
+                            host_txt.string = "localhost"
+                            host_txt.color = sf.Color(255, 255, 255, 200)
+                            host_txt.style = sf.Text.ITALIC
+                            port_txt.string = "42371"
+                            port_txt.color = sf.Color(255, 255, 255, 200)
+                            port_txt.style = sf.Text.ITALIC
                             error = 0
                         else:
                             error = 1
 
                     if host.zawiera(x, y):
                         chosen = 1
+
                     elif port.zawiera(x, y):
                         chosen = 2
+                        if port_txt.color == sf.Color(255, 255, 255, 200):
+                            port_txt.color = sf.Color.BLACK
+                            port_txt.style = sf.Text.REGULAR
+                            port_txt.string = ""
                     else:
                         chosen = 0
 
                 # Wpisywanie tekstu
                 elif event == sf.TextEvent:
                     if chosen == 1:
-                        if len(host_txt.string) < 9 and 33 <= event.unicode <= 126:
+                        if len(host_txt.string) < 15 and 33 <= event.unicode <= 126:
                             host_txt.string += chr(event.unicode)
                         elif event.unicode == 8:
                             host_txt.string = host_txt.string[0:-1]
                     elif chosen == 2:
-                        if len(port_txt.string) < 22 and 33 <= event.unicode <= 126:
+                        if len(port_txt.string) < 15 and 33 <= event.unicode <= 126:
                             port_txt.string += chr(event.unicode)
                         elif event.unicode == 8:
                             port_txt.string = port_txt.string[0:-1]
@@ -430,9 +453,17 @@ def main():
             if chosen == 1:
                 host.pole.color = sf.Color(255, 255, 255, 200)
                 port.pole.color = sf.Color(255, 255, 255, 100)
+                if host_txt.color == sf.Color(255, 255, 255, 200):
+                    host_txt.color = sf.Color.BLACK
+                    host_txt.style = sf.Text.REGULAR
+                    host_txt.string = ""
             elif chosen == 2:
                 host.pole.color = sf.Color(255, 255, 255, 100)
                 port.pole.color = sf.Color(255, 255, 255, 200)
+                if port_txt.color == sf.Color(255, 255, 255, 200):
+                    port_txt.color = sf.Color.BLACK
+                    port_txt.style = sf.Text.REGULAR
+                    port_txt.string = ""
             else:
                 host.pole.color = sf.Color(255, 255, 255, 100)
                 port.pole.color = sf.Color(255, 255, 255, 100)
@@ -470,6 +501,21 @@ def main():
                     player = Przycisk(gamer, 525, 295 + 50 * counter, 20, 100, lenx=450, leny=40, fo=fontArial,
                                       color=sf.Color.WHITE, style=sf.Text.REGULAR)
                     rysuj(window, player)
+                    counter += 1
+            elif option == 2:
+                heading = txt(475, 200, tek="Ranking", size=33, fo=fontCeltic)
+                h_name = Przycisk("Name", 412, 295, 20, 100, lenx=224, leny=40, fo=fontArial,
+                                      color=GREY, style=sf.Text.REGULAR)
+                h_score = Przycisk("Score", 638, 295, 20, 100, lenx=224, leny=40, fo=fontArial,
+                                      color=GREY, style=sf.Text.REGULAR)
+                rysuj(window, box, heading, h_name, h_score)
+                counter = 1
+                for gamer in lista_rankingowa():
+                    player = Przycisk(gamer, 412, 295 + 50 * counter, 20, 100, lenx=224, leny=40, fo=fontArial,
+                                      color=sf.Color.WHITE, style=sf.Text.REGULAR)
+                    points = Przycisk("1000", 638, 295 + 50 * counter, 20, 100, lenx=224, leny=40, fo=fontArial,
+                                      color=sf.Color.WHITE, style=sf.Text.REGULAR)
+                    rysuj(window, player, points)
                     counter += 1
             elif option != 0:
                 rysuj(window, box)
