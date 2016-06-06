@@ -177,9 +177,12 @@ class Session:
         self.games = dict()     # id -> game object
         self.waiting_room = None
         self.on_game_found = None
+        self.game_invitation = None             # type: ( User, bool->() ) -> ()
+        self.game_invitation_cancelled = None   # type: ( User ) -> ()
 
         client.set_notification_handler(14, lambda ch, data: self._on_new_game(data))
         client.set_notification_handler(15, lambda ch, data: self._on_your_turn_in_game(data))
+        client.set_notification_handler(16, lambda ch, data: self._on_invitation_notification(data))
 
     @classmethod
     def create(cls, address, port=42371):
@@ -302,6 +305,31 @@ class Session:
         game = self.games.get(game_id)
         if game: game._notification(data)
 
+    def _on_invitation_notification(self, data):
+        if data.get('notification') == 'random-game-challenge':
+            if self.game_invitation:
+                def set_status(accept):
+                    data_inner = {
+                        'command': 'accept-challenge' if accept else 'decline-challenge',
+                        'opponent': data['opponent']
+                    }
+
+                    def process_result(r):
+                        if accept:
+                            if r.response.get('status') == 'ok':
+                                return self._on_new_game(r.response)
+                            else:
+                                return None
+                        else:
+                            return _check_result_ok(r)
+
+                    return AsyncQuery(lambda: self.client.query(5, data_inner), lambda r: r.check(), process_result).run()
+
+                self.game_invitation(self._make_user(data.get('challenger')), set_status)
+
+        elif data.get('notification') == 'challenge-backed':
+            self.game_invitation_cancelled(self._make_user(data.get('challenger')))
+
     def get_waiting_room(self):
         """
         Gets (and creates if needed) Waiting Room object.
@@ -408,6 +436,21 @@ class Session:
         }
 
         return AsyncQuery(lambda: self.client.query(5, data), lambda r: r.check(), _check_result_ok).run()
+
+    def invite_to_game(self, user):
+        data = {
+            'command': 'challenge',
+            'opponent': user.id
+        }
+
+        return AsyncQuery(lambda: self.session.client.query(5, data), lambda r: r.check(), _check_result_ok).run()
+
+    def cancel_invite(self):
+        data = {
+            'command': 'cancel-challenge'
+        }
+
+        return AsyncQuery(lambda: self.session.client.query(5, data), lambda r: r.check(), _check_result_ok).run()
 
 
 class User:
