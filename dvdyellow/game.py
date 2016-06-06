@@ -179,6 +179,7 @@ class Session:
         self.on_game_found = None
         self.game_invitation = None             # type: ( User, bool->() ) -> ()
         self.game_invitation_cancelled = None   # type: ( User ) -> ()
+        self.game_invitation_declined = None    # type: ( User ) -> ()
 
         client.set_notification_handler(14, lambda ch, data: self._on_new_game(data))
         client.set_notification_handler(15, lambda ch, data: self._on_your_turn_in_game(data))
@@ -329,6 +330,8 @@ class Session:
 
         elif data.get('notification') == 'challenge-backed':
             self.game_invitation_cancelled(self._make_user(data.get('challenger')))
+        elif data.get('notification') == 'challenge-declined':
+            self.game_invitation_declined(self._make_user(data.get('challenger')))
 
     def get_waiting_room(self):
         """
