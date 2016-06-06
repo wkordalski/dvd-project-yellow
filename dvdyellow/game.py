@@ -445,9 +445,10 @@ class Session:
 
         return AsyncQuery(lambda: self.session.client.query(5, data), lambda r: r.check(), _check_result_ok).run()
 
-    def cancel_invite(self):
+    def cancel_invite(self, user):
         data = {
-            'command': 'cancel-challenge'
+            'command': 'cancel-challenge',
+            'challenger': user.id
         }
 
         return AsyncQuery(lambda: self.session.client.query(5, data), lambda r: r.check(), _check_result_ok).run()
