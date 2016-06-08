@@ -87,15 +87,17 @@ def wylogowywanie():
 
 def zalogowani():
     lista = []
-    for u in session.get_waiting_room().result.get_online_users().result:
-        if u.name.result != moj_login:
-            lista.append(u.name.result)
+    if not wyzywajacy:
+        for u in session.get_waiting_room().result.get_online_users().result:
+            if u.name.result != moj_login:
+                lista.append(u.name.result)
     return lista
 
 
 def lista_rankingowa():
     lista = []
-    for u in session.get_waiting_room().result.get_ranking().result:
+    if not wyzywajacy:
+        for u in session.get_waiting_room().result.get_ranking().result:
             lista.append((u[0].name.result, int(u[1] * 100)))
     return lista
 
@@ -151,6 +153,7 @@ def ustaw_sesje(host, port):
 
 def wyzwanie(kto, funkcja_decyzyjna):
     global wyzywajacy, decyzja
+    wyjscie_z_menu()
     wyzywajacy = kto
     decyzja = funkcja_decyzyjna
 
@@ -428,7 +431,6 @@ def main():
                         if ok.zawiera(x, y) or no.zawiera(x, y):
                             wyzywajacy = None
                             if ok.zawiera(x, y):
-                                wyjscie_z_menu()
                                 actual = 5
                                 ustaw_gre(decyzja(True).result)
                             else:
@@ -467,11 +469,13 @@ def main():
             elif actual == 5:
                 # Zamykanie
                 if event == sf.CloseEvent:
-                    wylogowywanie()
                     window.close()
-                    if gra:
+                    if gra and not gra.is_finished:
                         gra.abandon().result
                         gra = None
+                    elif not gra:
+                        rezygnacja()
+                    wylogowywanie()
                 if not gra:  # czekanie
                     # Klikanie
                     if event == sf.MouseButtonEvent and event.released:
