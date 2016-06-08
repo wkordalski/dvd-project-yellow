@@ -363,6 +363,7 @@ class Session:
         def wr_setter(r):
             if _check_result_ok(r):
                 wr.status = r.response['waiting-dict']
+                print('Got status: ' + str(wr.status))
                 self.waiting_room = wr
                 return wr
             else:
@@ -391,11 +392,7 @@ class Session:
             'command': 'stop-listening'
         }
 
-        wr = WaitingRoom(self)
-
-        def notifications_handler(channel, data):
-            wr._on_change_status(channel, data)
-        self.client.set_notification_handler(13, notifications_handler)
+        self.client.set_notification_handler(13, None)
 
         def wr_setter(r):
             if _check_result_ok(r):
