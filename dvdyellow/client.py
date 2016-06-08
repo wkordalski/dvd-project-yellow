@@ -6,12 +6,21 @@ from math import floor
 data_directory = 'data'
 fontCeltic = sf.Font.from_file(os.path.join(data_directory, "celtic.ttf"))
 fontArial = sf.Font.from_file(os.path.join(data_directory, "arial.ttf"))
+
 gra = None
 figura = None
 session = None
+moj_login = ""
+
+zlozone_wyzwanie = 0  # 1 - złożone, 0 - niezłożone, -1 - odrzucone
+wyzywajacy = None
+wyzwany = None
+decyzja = None
+
 moja_tura = 0
 
 tekstury = dict()
+
 
 # Przycisk
 class Przycisk(sf.Drawable):
@@ -41,11 +50,14 @@ class Przycisk(sf.Drawable):
 
 def ustaw_gre(game):
     if game is not None:
-        global gra, figura, moja_tura
+        global gra, figura, moja_tura, zlozone_wyzwanie, wyzwany, wyzywajacy
         gra = game
         gra.on_your_turn = zmiana_tury
         moja_tura = 1 if gra.player_number == 1 else 0
         figura = gra.get_transformable_pawn()
+        zlozone_wyzwanie = 0
+        wyzwany = None
+        wyzywajacy = None
 
 
 def txt(x, y, color=sf.Color.BLACK, size=25, fo=fontArial, tek="", style=sf.Text.REGULAR):
@@ -74,11 +86,18 @@ def wylogowywanie():
 
 
 def zalogowani():
-    return [u.name.result for u in session.get_waiting_room().result.get_online_users().result]
+    lista = []
+    for u in session.get_waiting_room().result.get_online_users().result:
+        if u.name.result != moj_login:
+            lista.append(u.name.result)
+    return lista
 
 
 def lista_rankingowa():
-    return [u[0].name.result for u in session.get_waiting_room().result.get_ranking().result]
+    lista = []
+    for u in session.get_waiting_room().result.get_ranking().result:
+            lista.append((u[0].name.result, int(u[1] * 100)))
+    return lista
 
 
 def wyjscie_z_menu():
@@ -86,11 +105,22 @@ def wyjscie_z_menu():
 
 
 def rezygnacja():
-    session.cancel_want_to_play().result
+    global zlozone_wyzwanie, wyzwany
+    if zlozone_wyzwanie == 1:
+        session.cancel_invite(wyzwany).result
+        zlozone_wyzwanie = 0
+        wyzwany = None
+    else:
+        session.cancel_want_to_play().result
 
 
 def przeciwnik():
-    return gra.opponent.name.result
+    if gra is not None:
+        return gra.opponent.name.result
+    elif wyzywajacy is not None:
+        return wyzywajacy.name.result
+    else:
+        return None
 
 
 def zmiana_tury(game):
@@ -113,16 +143,49 @@ def ustaw_sesje(host, port):
     except:
         return 0
     session.on_game_found = ustaw_gre
+    session.game_invitation = wyzwanie
+    session.game_invitation_declined = odrzucenie_wyzwania
+    session.game_invitation_cancelled = rezygnacja_wyzywajacego
     return 1
+
+
+def wyzwanie(kto, funkcja_decyzyjna):
+    global wyzywajacy, decyzja
+    wyzywajacy = kto
+    decyzja = funkcja_decyzyjna
+
+
+def odrzucenie_wyzwania(user):
+    global zlozone_wyzwanie
+    zlozone_wyzwanie = -1
+
+
+def rezygnacja_wyzywajacego(user):
+    global wyzywajacy
+    wyzywajacy = None
+
+
+def zapros(num):
+    global zlozone_wyzwanie, wyzwany
+    zlozone_wyzwanie = 1
+    lista = []
+    for u in session.get_waiting_room().result.get_online_users().result:
+        if u.name.result != moj_login:
+            lista.append(u)
+    if num < len(lista):
+        wyzwany = lista[num]
+        session.invite_to_game(wyzwany).result
+        return True
+    return False
 
 
 def main():
     # ZMIENNE WYSTĘPUJĄCE NA WIELU STRONACH
-    global gra, figura, session
+    global gra, figura, session, moj_login, wyzywajacy, zlozone_wyzwanie
     ground = sf.Sprite(sf.Texture.from_file(os.path.join(data_directory, "back.jpg")))
+    actual = 0  # 0 - strona startowa, 1 - wybór serwera, 2 - logowanie, 3 - rejestracja, 4-menu główne, 5-gra sieciowa, 6 - gra lokalna
     GREY = sf.Color(195, 195, 195)
     menu = Przycisk("Menu", 400, 530, 20, 255)
-    actual = 0  # 0 - strona startowa, 1 - wybór serwera, 2 - logowanie, 3 - rejestracja, 4-menu główne, 5-gra sieciowa, 6 - gra lokalna
     game = txt(210, 50, color=GREY, size=100, fo=fontCeltic, tek="Domination")
     x, y = 0, 0
 
@@ -151,13 +214,12 @@ def main():
     haslo_txt = txt(275, 300)  # gwiazdki
 
     moje_haslo = ""
-    moj_login = ""
 
     polacz = Przycisk("Connect", 400, 430, 20, 255)
     submit = Przycisk("Log in", 400, 430, 20, 255), Przycisk("Sign up", 400, 430, 20, 255)
 
     connerror_txt = txt(140, 50, color=GREY, size=35, fo=fontCeltic,
-            tek="Sorry, this address or port is incorrect.\n                 Please try again")
+                        tek="Sorry, this address or port is incorrect.\n                 Please try again")
     error_txt = txt(140, 50, color=GREY, size=35, fo=fontCeltic,
                     tek="Sorry, your login or password is incorrect.\n                 Please try again"), \
                 txt(223, 50, color=GREY, size=35, fo=fontCeltic,
@@ -175,6 +237,9 @@ def main():
     random = Przycisk("Random player", 650, 230, 20, 200, lenx=200)
     box = Przycisk("", 525, 390, lenx=450, leny=380, jasnosc=100)
     option = 0  # 1-new game, 2- ranking, 3-friends, 4-settings
+    alert = Przycisk("", 400, 300, lenx=400, leny=300, texture="black.jpg")
+    ok = Przycisk("accept", 300, 400, 20, fo=fontArial, lenx=160, leny=80)
+    no = Przycisk("reject", 500, 400, 20, fo=fontArial, lenx=160, leny=80)
 
     # GRA PRZEZ SIEĆ
     big_box = Przycisk("", 500, 300, 0, 255, lenx=560, leny=560)
@@ -339,6 +404,7 @@ def main():
                         if przeslij(actual, login_txt.string, moje_haslo):
                             actual = 4 if actual == 2 else 0
                             error = 0
+                            chosen = 0
                             moj_login = login_txt.string
                             login_txt.string = ""
                             haslo_txt.string = ""
@@ -358,25 +424,43 @@ def main():
 
                 # Klikanie
                 elif event == sf.MouseButtonEvent and event.released:
-                    if option == 1 and random.zawiera(x, y):
-                        option = 0
-                        actual = 5
-                        wyjscie_z_menu()
-                        ustaw_gre(session.set_want_to_play().result)
-                    elif nowa.zawiera(x, y):
-                        option = 1
-                    elif ranking.zawiera(x, y):
-                        option = 2
-                    elif przyjaciele.zawiera(x, y):
-                        option = 3
-                    elif zmiany.zawiera(x, y):
-                        option = 4
-                    elif wyloguj.zawiera(x, y):
-                        wyjscie_z_menu()
-                        wylogowywanie()
-                        moj_login = ""
-                        actual = 0
-                        option = 0
+                    if wyzywajacy is not None:
+                        if ok.zawiera(x, y) or no.zawiera(x, y):
+                            wyzywajacy = None
+                            if ok.zawiera(x, y):
+                                wyjscie_z_menu()
+                                actual = 5
+                                ustaw_gre(decyzja(True).result)
+                            else:
+                                decyzja(False).result
+                    else:
+                        if option == 1:
+                            if random.zawiera(x, y):
+                                option = 0
+                                actual = 5
+                                wyjscie_z_menu()
+                                ustaw_gre(session.set_want_to_play().result)
+                            elif box.zawiera(x, y) and not 20 <= (y - 295) % 50 <= 30:
+                                if zapros(int((y - 295) / 50)):
+                                    option = 0
+                                    actual = 5
+                                    wyjscie_z_menu()
+
+
+                        if nowa.zawiera(x, y):
+                            option = 1
+                        elif ranking.zawiera(x, y):
+                            option = 2
+                        elif przyjaciele.zawiera(x, y):
+                            option = 3
+                        elif zmiany.zawiera(x, y):
+                            option = 4
+                        elif wyloguj.zawiera(x, y):
+                            wyjscie_z_menu()
+                            wylogowywanie()
+                            moj_login = ""
+                            actual = 0
+                            option = 0
 
 
             # GRA PRZEZ SIEĆ
@@ -385,6 +469,9 @@ def main():
                 if event == sf.CloseEvent:
                     wylogowywanie()
                     window.close()
+                    if gra:
+                        gra.abandon().result
+                        gra = None
                 if not gra:  # czekanie
                     # Klikanie
                     if event == sf.MouseButtonEvent and event.released:
@@ -505,25 +592,31 @@ def main():
             elif option == 2:
                 heading = txt(475, 200, tek="Ranking", size=33, fo=fontCeltic)
                 h_name = Przycisk("Name", 412, 295, 20, 100, lenx=224, leny=40, fo=fontArial,
-                                      color=GREY, style=sf.Text.REGULAR)
+                                  color=GREY, style=sf.Text.REGULAR)
                 h_score = Przycisk("Score", 638, 295, 20, 100, lenx=224, leny=40, fo=fontArial,
-                                      color=GREY, style=sf.Text.REGULAR)
+                                   color=GREY, style=sf.Text.REGULAR)
                 rysuj(window, box, heading, h_name, h_score)
                 counter = 1
-                for gamer in lista_rankingowa():
+                for (gamer, score) in lista_rankingowa():
                     player = Przycisk(gamer, 412, 295 + 50 * counter, 20, 100, lenx=224, leny=40, fo=fontArial,
                                       color=sf.Color.WHITE, style=sf.Text.REGULAR)
-                    points = Przycisk("1000", 638, 295 + 50 * counter, 20, 100, lenx=224, leny=40, fo=fontArial,
+                    points = Przycisk(str(score), 638, 295 + 50 * counter, 20, 100, lenx=224, leny=40, fo=fontArial,
                                       color=sf.Color.WHITE, style=sf.Text.REGULAR)
                     rysuj(window, player, points)
                     counter += 1
             elif option != 0:
                 rysuj(window, box)
 
+            if wyzywajacy:
+                info = txt(210, 180, color=sf.Color.BLACK, size=35,
+                           tek="       CHALLENGE!\n" + przeciwnik() + " has challenged you!")
+                rysuj(window, alert, info, ok, no)
+
         # GRA PRZEZ SIEĆ
         elif actual == 5:
             if not gra:  # czekanie
-                wait = txt(250, 250, color=GREY, size=35, fo=fontCeltic, tek="Waiting for opponent")
+                napis = "The opponent rejected your invitation" if zlozone_wyzwanie == -1 else "Waiting for opponent"
+                wait = txt(250, 250, color=GREY, size=35, fo=fontCeltic, tek=napis)
                 rysuj(window, wait, menu)
 
             elif gra.is_finished:  # koniec gry
@@ -532,7 +625,7 @@ def main():
                                 + "\nOpponent's score: " + str(gra.player_points[2 - gra.player_number]))
                 result = {
                     'won': txt(250, 250, color=GREY, size=35, fo=fontCeltic, tek="Congratulations, you won!"),
-                    'defeated': txt(250, 250, color=GREY, size=35, fo=fontCeltic, tek="Sorry, you defeated. \nNext time will be better!"),
+                    'defeated': txt(250, 250, color=GREY, size=35, fo=fontCeltic, tek="Sorry, you are defeated. \nNext time will be better!"),
                     'draw': txt(250, 250, color=GREY, size=35, fo=fontCeltic, tek="Draw, no one won!")
                 }
 
@@ -625,7 +718,7 @@ def main():
         # GRA LOKALNA
         elif actual == 6:
             lazy = txt(160, 200, color=GREY, size=35, fo=fontCeltic,
-               tek="Error 404 - this page isn't available now, \nbecause programmers are too lazy. Sorry")
+                       tek="Error 404 - this page isn't available now, \nbecause programmers are too lazy. Sorry")
             rysuj(window, game, lazy, menu)
 
         window.display()
