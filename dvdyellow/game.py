@@ -312,7 +312,7 @@ class Session:
                 def set_status(accept):
                     data_inner = {
                         'command': 'accept-challenge' if accept else 'decline-challenge',
-                        'opponent': data['opponent']
+                        'opponent': data['challenger']
                     }
 
                     def process_result(r):
@@ -446,7 +446,7 @@ class Session:
             'opponent': user.id
         }
 
-        return AsyncQuery(lambda: self.session.client.query(5, data), lambda r: r.check(), _check_result_ok).run()
+        return AsyncQuery(lambda: self.client.query(5, data), lambda r: r.check(), _check_result_ok).run()
 
     def cancel_invite(self, user):
         data = {
@@ -454,7 +454,7 @@ class Session:
             'challenger': user.id
         }
 
-        return AsyncQuery(lambda: self.session.client.query(5, data), lambda r: r.check(), _check_result_ok).run()
+        return AsyncQuery(lambda: self.client.query(5, data), lambda r: r.check(), _check_result_ok).run()
 
 
 class User:
