@@ -248,6 +248,8 @@ def main():
     big_box = Przycisk("", 500, 300, 0, 255, lenx=560, leny=560)
     big_box2 = Przycisk("", 500, 300, 0, 255, lenx=550, leny=550, color=sf.Color(73, 99, 135, 255))
     finish = Przycisk("Finish game", 110, 50, 20, 255, 180, 60)
+    wym = None
+    kwadrat = sf.Sprite(sf.Texture.from_file(os.path.join(data_directory, "black.jpg")))
 
     while window.is_open:
         if session:
@@ -432,6 +434,7 @@ def main():
                             wyzywajacy = None
                             if ok.zawiera(x, y):
                                 actual = 5
+                                option = 0
                                 ustaw_gre(decyzja(True).result)
                             else:
                                 decyzja(False).result
@@ -491,8 +494,8 @@ def main():
                             gra.abandon().result
                             gra = None
                         if moja_tura:
-                            xx = int((x - 250) / (wym - 1))
-                            yy = int((y - 50) / (wym - 1))
+                            xx = int((x - 250) / wym)
+                            yy = int((y - 50) / wym)
                             if 0 <= xx < gra.width and 0 <= yy < gra.height and gra.move((xx, yy), figura).result:
                                 zmiana_tury(gra)
 
@@ -656,9 +659,7 @@ def main():
                 list_fig = []
                 czy_zielona = 1
 
-                wym = int(500 / max(gra.width, gra.height))
-
-                kwadrat = sf.Sprite(sf.Texture.from_file(os.path.join(data_directory, "black.jpg")))
+                wym = int(504 / max(gra.width, gra.height))
                 kwadrat.texture_rectangle = sf.Rectangle((10, 10), (wym, wym))
 
                 """
@@ -671,16 +672,16 @@ def main():
                 while poz_y < gra.height:
                     poz_x = 0
                     while poz_x < gra.width:
-                        if y < 50 + (poz_y + 1) * wym and y + (figura.height - 1) * wym > 50 + poz_y * wym \
-                                and x < 250 + (poz_x + 1) * wym \
-                                and x + (figura.width - 1) * wym > 250 + poz_x * wym \
-                                and figura.get_pawn_point(floor((250 - x) / wym + poz_x + 1),
-                                                          floor((50 - y) / wym + poz_y + 1)) \
-                                and y + (figura.height - 1) * wym <= 50 + gra.height * wym and y >= 50 \
-                                and x + (figura.width - 1) * wym <= 250 + gra.width * wym and x >= 250 and moja_tura:
-                            if gra.get_field(poz_x, poz_y)[0] != 0:
+                        kw_x = int((x - 250) / wym)
+                        kw_y = int((y - 50) / wym)
+                        if figura.get_pawn_point(poz_x - kw_x, poz_y - kw_y) \
+                                and kw_y <= poz_y < kw_y + figura.height \
+                                and kw_x <= poz_x < kw_x + figura.width \
+                                and moja_tura:
+                            if gra.get_field(poz_x, poz_y)[0] != 0 or kw_x + figura.width > gra.width \
+                                    or kw_y + figura.height > gra.height:
                                 czy_zielona = 0
-                            list_fig.append((250 + poz_x * (wym - 1), 50 + poz_y * (wym - 1)))
+                            list_fig.append((250 + poz_x * wym, 50 + poz_y * wym))
                         else:
                             if gra.get_field(poz_x, poz_y)[0] == 0:
                                 kwadrat.color = sf.Color(255, 255, 255, 255)
@@ -695,13 +696,13 @@ def main():
                             elif gra.get_field(poz_x, poz_y)[0] == -3:
                                 kwadrat.color = sf.Color(255, 255, 255, 0)
 
-                            kwadrat.position = sf.Vector2(250 + poz_x * (wym - 1), 50 + poz_y * (wym - 1))
+                            kwadrat.position = sf.Vector2(250 + poz_x * wym, 50 + poz_y * wym)
                             rysuj(window, kwadrat)
                         if gra.get_field(poz_x, poz_y)[1] < 0:
-                            numerek = txt(250 + poz_x * (wym - 1) + wym / 8, 50 + poz_y * (wym - 1),
+                            numerek = txt(250 + poz_x * wym + wym / 8, 50 + poz_y * wym,
                                           tek=str(gra.get_field(poz_x, poz_y)[1]), size=wym * 3 / 5)
                         else:
-                            numerek = txt(250 + poz_x * (wym - 1) + wym / 5, 50 + poz_y * (wym - 1),
+                            numerek = txt(250 + poz_x * wym + wym / 5, 50 + poz_y * wym,
                                           tek=str(gra.get_field(poz_x, poz_y)[1]), size=wym * 3 / 5)
                         if gra.get_field(poz_x, poz_y)[0] != -3:
                             rysuj(window, numerek)
