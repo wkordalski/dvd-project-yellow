@@ -167,7 +167,7 @@ class Session:
     """
     Represents simple operations that can be done on the server.
     """
-    def __init__(self, client):
+    def __init__(self, client : Client):
         """
         Internal ctor for Session object. (To create Session object see make_session function).
         :param client: Network connection to use.
@@ -176,7 +176,7 @@ class Session:
         self.known_users = dict()
         self.games = dict()     # id -> game object
         self.waiting_room = None
-        self.on_game_found = None
+        self.on_game_found = None               # type: ( Game ) -> ()
         self.game_invitation = None             # type: ( User, bool->() ) -> ()
         self.game_invitation_cancelled = None   # type: ( User ) -> ()
         self.game_invitation_declined = None    # type: ( User ) -> ()
@@ -186,7 +186,7 @@ class Session:
         client.set_notification_handler(16, lambda ch, data: self._on_invitation_notification(data))
 
     @classmethod
-    def create(cls, address, port=42371):
+    def create(cls, address, port=42371, blocking=False):
         """
         Connects to DVD Yellow game server and creates Session objects.
         :param cls: Session class to use.
@@ -194,7 +194,7 @@ class Session:
         :param port: Port number of the game server.
         :return: Asynchronous query object (returning Session object).
         """
-        client = Client(1)
+        client = Client(1, blocking=blocking)
         return AsyncQuery(lambda: client.connect(address, port), lambda r: r.is_connected, lambda _: Session(client)).run()
 
     def _make_user(self, uid):
@@ -291,7 +291,6 @@ class Session:
                     player_number=data['player-number'])
 
         self.games[game_id] = game
-        print(game.pawn)
         if self.on_game_found:
             self.on_game_found(game)
         return game
@@ -363,7 +362,6 @@ class Session:
         def wr_setter(r):
             if _check_result_ok(r):
                 wr.status = r.response['waiting-dict']
-                print('Got status: ' + str(wr.status))
                 self.waiting_room = wr
                 return wr
             else:
@@ -627,13 +625,16 @@ class TransformablePawn:
     """
     Represents a pawn that can be rotated.
     """
-    def __init__(self, pawn):
+    def __init__(self, pawn, rotation=0):
         """
         Creates transformable pawn based on other pawn.
         :param pawn: The base pawn.
         """
-        self._rot = 0
+        self._rot = rotation % 4
         self._pawn = pawn
+
+    def copy(self):
+        return TransformablePawn(self._pawn, self._rot)
 
     def rotate_clockwise(self):
         """
@@ -776,7 +777,6 @@ class Game:
         }
 
         def result_processor(r):
-            print(r.response)
             if r and r.response.get('status') == 'ok':
                 data = r.response
                 if data.get('game-status') == 'opponents-turn':
