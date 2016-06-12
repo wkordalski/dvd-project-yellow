@@ -20,7 +20,7 @@ from .network import Server
 
 
 class ServerManager:
-    def __init__(self, target_configuration=None, config_file=None, config_object=None):
+    def __init__(self, target_configuration=None, config_file=None, config_object=None, install=False):
         self.server = Server(lambda x: x == 1)
         self.logger = logging.getLogger("ServerManager")
         self.dirs = AppDirs('dvdyellow', appauthor='yellow-team', multipath=True)
@@ -32,9 +32,8 @@ class ServerManager:
         self.user_manager = UserManager(self.server, self.db_session)
         self.waiting_room = WaitingRoomManager(self)
         self.game_manager = GameManager(self.server, self.user_manager, self.db_session)
-        self.db_session.add(GamePawn(name='default_pawn', width=2, height=3, shapestring="101110"))
-        self.db_session.add(GameBoard(name='default_board', width=6, height=8, shapestring="1" * 48))
-        self.db_session.flush()
+        if install:
+            self._install()
         self.on_run = None
 
     def _load_config_file(self, path):
@@ -55,6 +54,15 @@ class ServerManager:
             if not os.path.isfile(conf_file):
                 continue
             self._load_config_file(conf_file)
+
+    def _install(self):
+        self.db_session.add(GamePawn(name='default_pawn', width=2, height=3, shapestring="101110"))
+        self.db_session.add(GameBoard(name='default_board', width=6, height=8, shapestring="1" * 48))
+        self.db_session.add(GameBoard(name='big_board', width=15, height=15,
+                                      shapestring=("00" + "1"*(15*15-4) + "00")))
+        # here can add other pawns and boards
+        self.db_session.flush()
+        pass
 
     def get_config_entry(self, getter, default, is_empty_default=False):
         """
@@ -934,10 +942,12 @@ def main():
     arg_parser = argparse.ArgumentParser(description="DVD Yellow Project server")
     arg_parser.add_argument('--config', metavar='file', dest='config_file', type=str, default=None,
                             help="Server configuration file")
+    arg_parser.add_argument('--install', dest='do_install', default=False, action='store_true',
+                            help="Should the server add some objects to database (default boards and pawns)")
 
     args = arg_parser.parse_args()
 
-    server_manager = ServerManager(config_file=args.config_file)
+    server_manager = ServerManager(config_file=args.config_file, install=args.do_install)
     server_manager.run()
 
 
