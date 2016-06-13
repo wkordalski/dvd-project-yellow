@@ -175,7 +175,7 @@ def zapros(num):
     for u in session.get_waiting_room().result.get_online_users().result:
         if u.name.result != moj_login:
             lista.append(u)
-    if num < len(lista):
+    if 0 <= num < len(lista):
         wyzwany = lista[num]
         session.invite_to_game(wyzwany).result
         return True
