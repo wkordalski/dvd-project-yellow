@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import os
 from dvdyellow.game import *
 import sfml as sf
